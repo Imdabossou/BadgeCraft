@@ -1,0 +1,2415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BadgeCraft — Event Badge Designer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f4f2ee;
+    --surface: #ffffff;
+    --surface2: #f9f8f5;
+    --border: #e2dfd8;
+    --border2: #ccc9c0;
+    --text: #1a1916;
+    --text2: #6b6860;
+    --text3: #9c9a94;
+    --accent: #2a5c8a;
+    --accent-light: #dce9f5;
+    --accent2: #c85a1a;
+    --success: #2d7a4a;
+    --danger: #c23434;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+    --shadow-lg: 0 4px 16px rgba(0,0,0,0.12), 0 8px 32px rgba(0,0,0,0.06);
+    --r: 6px;
+    --r-lg: 10px;
+    --transition: all 0.2s ease;
+  }
+
+  [data-theme="dark"] {
+    --bg: #121212;
+    --surface: #1e1e1e;
+    --surface2: #252525;
+    --border: #333333;
+    --border2: #444444;
+    --text: #e0e0e0;
+    --text2: #b0b0b0;
+    --text3: #707070;
+    --accent: #4a9eff;
+    --accent-light: #1a2a3a;
+    --accent2: #ff8c42;
+    --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2);
+    --shadow-lg: 0 4px 16px rgba(0,0,0,0.4), 0 8px 32px rgba(0,0,0,0.3);
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: background-color var(--transition), color var(--transition);
+  }
+
+  /* ── Header ── */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+    z-index: 100;
+  }
+  .logo { font-weight: 600; font-size: 16px; letter-spacing: -0.3px; color: var(--accent); }
+  .logo span { color: var(--accent2); }
+  .header-tabs { display: flex; gap: 2px; margin-left: 8px; }
+  .tab {
+    padding: 6px 14px; border-radius: var(--r); font-size: 13px; font-weight: 500; cursor: pointer; color: var(--text2);
+    border: none; background: none; transition: all .15s; outline: none;
+  }
+  .tab:hover { background: var(--surface2); color: var(--text); }
+  .tab.active { 
+    background: var(--accent-light); color: var(--accent); 
+    box-shadow: 0 0 0 1px var(--accent) inset, 0 0 8px rgba(42, 92, 138, 0.1);
+  }
+  .header-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  
+  .btn {
+    padding: 7px 14px; border-radius: var(--r); font-size: 13px; font-weight: 500; cursor: pointer;
+    border: 1px solid var(--border2); background: var(--surface); color: var(--text); transition: all .15s; font-family: inherit;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { background: var(--surface2); border-color: var(--accent); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.primary:hover { background: #1e4a73; }
+  .btn.danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+  .record-nav { display: flex; align-items: center; gap: 6px; }
+  .record-nav button { width: 26px; height: 26px; border-radius: 4px; border: 1px solid var(--border2); background: var(--surface); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text); }
+  .record-nav strong { color: var(--text); font-weight: 500; font-family: 'DM Mono', monospace; font-size: 12px; }
+
+  /* ── Main Layout ── */
+  .main { display: flex; flex: 1; overflow: hidden; }
+
+  /* ── Panels ── */
+  .panel-left { width: 300px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; }
+  .panel-right { width: 300px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; }
+  .panel-section { border-bottom: 1px solid var(--border); padding: 14px 16px; }
+  .panel-section-title { font-size: 11px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase; color: var(--text3); margin-bottom: 10px; }
+  
+  .form-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .form-row label { font-size: 12px; color: var(--text2); width: 85px; flex-shrink: 0; }
+  .form-row input[type=number], .form-row input[type=text] {
+    flex: 1; min-width: 0; max-width: 80px; padding: 5px 8px; border: 1px solid var(--border2); border-radius: var(--r);
+    font-size: 12px; font-family: 'DM Mono', monospace; background: var(--surface2); color: var(--text); outline: none;
+  }
+  .form-row select { flex: 1; padding: 5px 8px; border: 1px solid var(--border2); border-radius: var(--r); font-size: 12px; background: var(--surface2); color: var(--text); outline: none; }
+  .form-row span { font-size: 11px; color: var(--text3); }
+
+  /* ── Canvas area ── */
+  .canvas-area {
+    flex: 1; display: flex; align-items: center; justify-content: center; overflow: auto; 
+    background: #e8e5df; background-image: radial-gradient(circle, #c8c5bf 1px, transparent 1px); background-size: 20px 20px; 
+    padding: 40px; position: relative;
+  }
+  .badge-canvas-wrapper { position: relative; box-shadow: var(--shadow-lg); }
+  #badge-canvas { display: block; cursor: crosshair; }
+
+  /* ── Zoom Controls ── */
+  .zoom-controls { position: absolute; bottom: 20px; right: 20px; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--r-lg); display: flex; align-items: center; gap: 4px; padding: 4px; box-shadow: var(--shadow); z-index: 50; }
+  .zoom-controls button { width: 28px; height: 28px; border: none; background: none; border-radius: var(--r); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text2); transition: all 0.1s; }
+  .zoom-controls button:hover { background: var(--surface2); color: var(--accent); }
+  .zoom-controls span { font-size: 11px; font-family: 'DM Mono', monospace; width: 40px; text-align: center; color: var(--text2); }
+
+  /* ── Tools ── */
+  .tools-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .tool-btn { padding: 8px 4px; border-radius: var(--r); border: 1px solid var(--border); background: var(--surface2); cursor: pointer; font-size: 11px; color: var(--text2); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .tool-btn svg { width: 18px; height: 18px; }
+  .tool-btn:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
+
+  /* ── Layers ── */
+  .layers-list { display: flex; flex-direction: column; gap: 3px; }
+  .layer-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--r); cursor: pointer; font-size: 12px; transition: all 0.1s; }
+  .layer-item:hover { background: var(--surface2); }
+  .layer-item.selected { background: var(--accent-light); color: var(--accent); }
+  .layer-dot { width: 10px; height: 10px; border-radius: 2px; }
+  .layer-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .layer-del { opacity: 0; background: none; border: none; cursor: pointer; color: var(--danger); font-size: 14px; padding: 0 4px; }
+  .layer-item:hover .layer-del { opacity: 1; }
+
+  /* ── Layout Preview ── */
+  .layout-preview-area { flex: 1; display: flex; align-items: center; justify-content: center; background: #e8e5df; padding: 40px; overflow: auto; }
+  .page-outline { background: #fff; box-shadow: var(--shadow-lg); position: relative; border: 1px solid var(--border2); }
+  .badge-slot { position: absolute; border: 1px dashed var(--accent); background: rgba(42, 92, 138, 0.05); display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--accent); font-family: 'DM Mono', monospace; }
+
+  /* ── Tabs ── */
+  .page { display: none; flex: 1; overflow: hidden; }
+  .page.active { display: flex; }
+
+  /* ── Data Tab ── */
+  .csv-header { padding: 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+  .csv-table-wrap { flex: 1; overflow: auto; background: var(--surface2); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; background: var(--surface); }
+  th { background: var(--surface2); padding: 10px 12px; text-align: left; position: sticky; top: 0; border-bottom: 2px solid var(--border); color: var(--text2); font-weight: 600; }
+  td { padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--text2); }
+  tr:hover td { background: var(--surface2); }
+
+  /* ── Preview Grid ── */
+  .preview-grid { display: flex; flex-wrap: wrap; gap: 30px; padding: 40px; justify-content: center; overflow-y: auto; flex: 1; background: #e8e5df; }
+  .preview-page { background: #fff; box-shadow: var(--shadow-lg); position: relative; flex-shrink: 0; margin-bottom: 40px; }
+  .preview-badge { position: absolute; overflow: hidden; }
+
+  /* ── Props ── */
+  .prop-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .prop-row label { font-size: 11px; color: var(--text2); width: 60px; flex-shrink: 0; }
+  .prop-row input, .prop-row select, .prop-row textarea { 
+    flex: 1; min-width: 0; padding: 5px 8px; border: 1px solid var(--border2); border-radius: 4px; 
+    font-size: 12px; background: var(--surface2); color: var(--text); outline: none; 
+  }
+  .prop-row textarea { height: 60px; resize: vertical; }
+
+  /* ── Print Tab ── */
+  .print-tab-layout { display: flex; flex-direction: row; flex: 1; overflow: hidden; }
+  .print-panel { width: 340px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; }
+  .print-main { flex: 1; padding: 40px; background: #e8e5df; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 24px; }
+  .print-card { background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); padding: 28px; width: 100%; max-width: 600px; }
+  .print-card h2 { font-size: 16px; font-weight: 600; color: var(--accent); margin-bottom: 4px; }
+  .print-card p { font-size: 12px; color: var(--text2); margin-bottom: 18px; }
+  .filename-builder { background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--r); padding: 10px 12px; font-family: 'DM Mono', monospace; font-size: 13px; color: var(--accent); min-height: 36px; word-break: break-all; }
+  .token-pill { display: inline-flex; align-items: center; gap: 4px; background: var(--accent-light); color: var(--accent); border: 1px solid var(--accent); border-radius: 20px; padding: 2px 8px; font-size: 11px; font-family: 'DM Mono', monospace; cursor: pointer; transition: all 0.1s; }
+  .token-pill:hover { background: var(--accent); color: #fff; }
+  .token-pill .remove { opacity: 0.6; font-size: 13px; margin-left: 2px; }
+  .token-pill:hover .remove { opacity: 1; }
+  .var-chip { display: inline-flex; align-items: center; background: var(--surface2); border: 1px solid var(--border2); border-radius: 4px; padding: 4px 8px; font-size: 11px; font-family: 'DM Mono', monospace; cursor: pointer; color: var(--text2); margin: 2px; transition: all 0.1s; }
+  .var-chip:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+  .separator-btn { display: inline-flex; align-items: center; background: var(--surface2); border: 1px solid var(--border2); border-radius: 4px; padding: 4px 10px; font-size: 11px; cursor: pointer; color: var(--text2); margin: 2px; transition: all 0.1s; }
+  .separator-btn:hover { background: var(--surface2); border-color: var(--text3); color: var(--text); }
+  .batch-progress-wrap { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; display: none; }
+  .batch-log { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text2); max-height: 120px; overflow-y: auto; margin-top: 8px; line-height: 1.6; }
+  .mode-toggle { display: flex; gap: 4px; background: var(--surface2); padding: 4px; border-radius: var(--r); border: 1px solid var(--border); }
+  .mode-btn { flex: 1; padding: 8px 12px; border: none; background: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: inherit; color: var(--text2); transition: all 0.15s; font-weight: 500; }
+  .mode-btn.active { background: var(--accent); color: #fff; }
+  .range-row { display: flex; align-items: center; gap: 8px; }
+  .range-row input[type=number] { width: 70px; padding: 5px 8px; border: 1px solid var(--border2); border-radius: var(--r); font-size: 12px; font-family: 'DM Mono', monospace; background: var(--surface2); color: var(--text); outline: none; }
+
+  .statusbar { height: 26px; background: var(--surface); border-top: 1px solid var(--border); padding: 0 16px; display: flex; align-items: center; gap: 16px; font-size: 11px; color: var(--text3); }
+  .statusbar b { color: var(--text2); }
+  .prop-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100px; color: var(--text3); font-size: 12px; opacity: 0.6; }
+
+  /* ── Mobile / Tablet ── */
+  .mobile-menu-btn {
+    display: none;
+    width: 36px; height: 36px; border-radius: var(--r);
+    border: 1px solid var(--border2); background: var(--surface2);
+    cursor: pointer; align-items: center; justify-content: center;
+    color: var(--text); flex-shrink: 0;
+  }
+  .mobile-menu-btn svg { width: 18px; height: 18px; }
+
+  /* Mobile bottom nav */
+  .mobile-tab-bar {
+    display: none;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding: 6px 0 env(safe-area-inset-bottom, 6px);
+    z-index: 200;
+    justify-content: space-around;
+    align-items: center;
+  }
+  .mobile-tab-item {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 6px 10px; border-radius: var(--r);
+    border: none; background: none; cursor: pointer;
+    font-size: 10px; font-weight: 500; color: var(--text3);
+    font-family: inherit; transition: color 0.15s;
+    min-width: 44px; min-height: 44px; justify-content: center;
+  }
+  .mobile-tab-item svg { width: 20px; height: 20px; }
+  .mobile-tab-item.active { color: var(--accent); }
+  .mobile-tab-item span { font-size: 9px; }
+
+  /* Mobile slide-in drawer */
+  .mobile-drawer-overlay {
+    display: none;
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    z-index: 300; backdrop-filter: blur(2px);
+  }
+  .mobile-drawer-overlay.open { display: block; }
+  .mobile-drawer {
+    position: fixed; top: 0; right: 0; bottom: 0;
+    width: min(85vw, 320px);
+    background: var(--surface); border-left: 1px solid var(--border);
+    z-index: 400; display: flex; flex-direction: column;
+    transform: translateX(100%); transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+    overflow-y: auto;
+  }
+  .mobile-drawer.open { transform: translateX(0); }
+  .mobile-drawer-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px; border-bottom: 1px solid var(--border);
+    font-weight: 600; font-size: 14px; flex-shrink: 0;
+  }
+  .mobile-drawer-close {
+    width: 32px; height: 32px; border: none; background: none;
+    cursor: pointer; color: var(--text2); border-radius: var(--r);
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+  }
+  .mobile-drawer-close:hover { background: var(--surface2); }
+
+  /* Mobile panel toggle (left/right panels inside design tab) */
+  .mobile-panel-toggle {
+    display: none;
+    position: fixed; bottom: 80px; right: 16px;
+    z-index: 150; gap: 8px; flex-direction: column;
+  }
+  .mobile-fab {
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 1px solid var(--border2); background: var(--surface);
+    box-shadow: var(--shadow-lg); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text2); font-size: 18px; transition: all 0.15s;
+  }
+  .mobile-fab:hover, .mobile-fab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .mobile-fab svg { width: 20px; height: 20px; }
+
+  @media (max-width: 900px) {
+    body { overflow: auto; height: auto; min-height: 100vh; }
+
+    /* Hide desktop tabs in header */
+    .header-tabs { display: none; }
+    .header-right { gap: 6px; }
+
+    /* Show mobile bottom nav */
+    .mobile-tab-bar { display: flex; }
+
+    /* Pad content above mobile nav */
+    .main { padding-bottom: 64px; }
+    .statusbar { display: none; }
+
+    /* Stack panels vertically */
+    .main { flex-direction: column; overflow: visible; }
+
+    /* Design tab: canvas always on top, panels appear below */
+    #tab-design { flex-direction: column !important; }
+    #tab-design .canvas-area {
+      order: 0;
+      min-height: 45vh; flex: none; width: 100%;
+      padding: 16px;
+    }
+    #tab-design .panel-left,
+    #tab-design .panel-right {
+      display: none;
+      order: 1;
+      width: 100%; border: none; border-top: 1px solid var(--border);
+    }
+    #tab-design .panel-left.mobile-open,
+    #tab-design .panel-right.mobile-open { display: flex; }
+
+    /* Layout tab */
+    #tab-layout { flex-direction: column !important; }
+    #tab-layout .panel-left { width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
+    #tab-layout .layout-preview-area { min-height: 40vh; flex: none; }
+
+    /* Print tab */
+    .print-tab-layout { flex-direction: column; }
+    .print-panel { width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
+    .print-main { padding: 20px 16px; }
+    .print-card { padding: 18px 16px; }
+
+    /* Config tab */
+    #tab-config { padding: 16px !important; }
+
+    /* Data tab header */
+    .csv-header { flex-wrap: wrap; gap: 8px; }
+
+    /* Preview tab */
+    .preview-grid { padding: 16px; gap: 16px; }
+
+    /* Form rows: make inputs wider on small screens */
+    .form-row input[type=number], .form-row input[type=text] { max-width: 100%; min-width: 60px; }
+
+    /* Zoom controls: move above mobile nav */
+    .zoom-controls { bottom: 76px; right: 12px; }
+  }
+
+  @media (max-width: 480px) {
+    .header { padding: 0 12px; height: 48px; gap: 10px; }
+    .logo { font-size: 15px; }
+    .btn { padding: 6px 10px; font-size: 12px; }
+    .panel-section { padding: 12px; }
+    .mobile-tab-item { padding: 4px 6px; min-width: 38px; }
+  }
+
+  /* ── Eventbrite Modal ── */
+  .eb-modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 500;
+    align-items: center; justify-content: center;
+    backdrop-filter: blur(3px);
+  }
+  .eb-modal-overlay.open { display: flex; }
+  .eb-modal {
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: var(--r-lg); box-shadow: var(--shadow-lg);
+    width: min(540px, 96vw); max-height: 90vh;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .eb-modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .eb-modal-header h3 { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .eb-modal-body { padding: 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px; }
+  .eb-modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; flex-shrink: 0; }
+  .eb-step { display: flex; flex-direction: column; gap: 8px; }
+  .eb-step-label { font-size: 11px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase; color: var(--text3); }
+  .eb-input {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border2);
+    border-radius: var(--r); font-size: 13px; background: var(--surface2);
+    color: var(--text); outline: none; font-family: inherit;
+    transition: border-color 0.15s;
+  }
+  .eb-input:focus { border-color: var(--accent); }
+  .eb-events-list { display: flex; flex-direction: column; gap: 6px; max-height: 240px; overflow-y: auto; }
+  .eb-event-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    border: 1px solid var(--border); border-radius: var(--r); cursor: pointer;
+    transition: all 0.15s; background: var(--surface2);
+  }
+  .eb-event-item:hover { border-color: var(--accent); background: var(--accent-light); }
+  .eb-event-item.selected { border-color: var(--accent); background: var(--accent-light); }
+  .eb-event-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+  .eb-event-info { flex: 1; min-width: 0; }
+  .eb-event-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .eb-event-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .eb-event-check { color: var(--accent); font-size: 14px; flex-shrink: 0; }
+  .eb-status { padding: 10px 12px; border-radius: var(--r); font-size: 12px; display: flex; align-items: center; gap: 8px; }
+  .eb-status.info { background: var(--accent-light); color: var(--accent); border: 1px solid var(--accent); }
+  .eb-status.error { background: #fde8e8; color: var(--danger); border: 1px solid var(--danger); }
+  .eb-status.success { background: #e8f5ee; color: var(--success); border: 1px solid var(--success); }
+  [data-theme="dark"] .eb-status.error { background: #3a1a1a; }
+  [data-theme="dark"] .eb-status.success { background: #1a3a26; }
+  .eb-spinner { width: 14px; height: 14px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: eb-spin 0.7s linear infinite; flex-shrink: 0; }
+  @keyframes eb-spin { to { transform: rotate(360deg); } }
+  .eb-field-map { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .eb-field-row { display: flex; flex-direction: column; gap: 4px; }
+  .eb-field-row label { font-size: 11px; color: var(--text2); }
+  .eb-field-row select { padding: 6px 8px; border: 1px solid var(--border2); border-radius: var(--r); font-size: 12px; background: var(--surface2); color: var(--text); outline: none; }
+  .eb-attendee-count { font-size: 12px; color: var(--text2); padding: 8px 12px; background: var(--surface2); border-radius: var(--r); border: 1px solid var(--border); }
+  .eb-logo-icon { width: 20px; height: 20px; background: #f05537; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .eb-logo-icon svg { width: 12px; height: 12px; fill: white; }
+  .btn.eb-btn { background: #f05537; color: #fff; border-color: #f05537; }
+  .btn.eb-btn:hover { background: #d44020; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">Badge<span>Craft</span></div>
+  <div class="header-tabs">
+    <button class="tab active" id="tab-btn-layout" onclick="switchTab('layout')">Layout</button>
+    <button class="tab" id="tab-btn-design" onclick="switchTab('design')">Design</button>
+    <button class="tab" id="tab-btn-data" onclick="switchTab('data')">Data</button>
+    <button class="tab" id="tab-btn-preview" onclick="switchTab('preview')">Preview</button>
+    <button class="tab" id="tab-btn-config" onclick="switchTab('config')">Config</button>
+    <button class="tab" id="tab-btn-print" onclick="switchTab('print')">Print</button>
+  </div>
+  <div class="header-right">
+    <div class="record-nav" id="record-nav" style="display:none">
+      <button onclick="prevRecord()">←</button>
+      <strong id="record-label">1 / 1</strong>
+      <button onclick="nextRecord()">→</button>
+    </div>
+    <button class="btn" onclick="toggleDarkMode()" title="Toggle Theme">🌓</button>
+
+  </div>
+</div>
+
+<!-- Mobile bottom tab bar -->
+<div class="mobile-tab-bar" id="mobile-tab-bar">
+  <button class="mobile-tab-item active" id="mob-tab-layout" onclick="mobileSwitchTab('layout')">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="16" height="16" rx="2"/><line x1="2" y1="7" x2="18" y2="7"/><line x1="8" y1="7" x2="8" y2="18"/></svg>
+    <span>Layout</span>
+  </button>
+  <button class="mobile-tab-item" id="mob-tab-design" onclick="mobileSwitchTab('design')">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 9-9a1.4 1.4 0 0 0-2-2L5 11l-2 6z"/></svg>
+    <span>Design</span>
+  </button>
+  <button class="mobile-tab-item" id="mob-tab-data" onclick="mobileSwitchTab('data')">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="16" height="3" rx="1"/><rect x="2" y="9" width="16" height="3" rx="1"/><rect x="2" y="14" width="10" height="3" rx="1"/></svg>
+    <span>Data</span>
+  </button>
+  <button class="mobile-tab-item" id="mob-tab-preview" onclick="mobileSwitchTab('preview')">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 10s4-6 9-6 9 6 9 6-4 6-9 6-9-6-9-6z"/><circle cx="10" cy="10" r="2.5"/></svg>
+    <span>Preview</span>
+  </button>
+  <button class="mobile-tab-item" id="mob-tab-print" onclick="mobileSwitchTab('print')">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="12" height="10" rx="1"/><path d="M4 8H2a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h2v3h12v-3h2a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1h-2"/><rect x="4" y="14" width="12" height="4" rx="0.5"/></svg>
+    <span>Print</span>
+  </button>
+  <button class="mobile-tab-item" id="mob-tab-more" onclick="openMobileMore()">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="4" cy="10" r="1.5" fill="currentColor"/><circle cx="10" cy="10" r="1.5" fill="currentColor"/><circle cx="16" cy="10" r="1.5" fill="currentColor"/></svg>
+    <span>More</span>
+  </button>
+</div>
+
+<!-- Mobile drawer overlay (for "More" menu) -->
+<div class="mobile-drawer-overlay" id="mobile-drawer-overlay" onclick="closeMobileMore()"></div>
+<div class="mobile-drawer" id="mobile-drawer">
+  <div class="mobile-drawer-header">
+    <span>More Options</span>
+    <button class="mobile-drawer-close" onclick="closeMobileMore()">✕</button>
+  </div>
+  <div style="padding:12px 16px; display:flex; flex-direction:column; gap:8px">
+    <button class="btn" style="width:100%; justify-content:flex-start; gap:10px; padding:12px 14px; font-size:13px" onclick="closeMobileMore(); mobileSwitchTab('config')">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.2 4.2l1.4 1.4M14.4 14.4l1.4 1.4M4.2 15.8l1.4-1.4M14.4 5.6l1.4-1.4"/></svg>
+      Config &amp; Backup
+    </button>
+    <button class="btn" style="width:100%; justify-content:flex-start; gap:10px; padding:12px 14px; font-size:13px" onclick="closeMobileMore(); toggleDarkMode()">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 13A7 7 0 0 1 7 3a7 7 0 1 0 10 10z"/></svg>
+      Toggle Theme
+    </button>
+    <div id="mob-record-nav-drawer" style="display:none; align-items:center; justify-content:space-between; padding:12px 14px; border:1px solid var(--border); border-radius:var(--r); margin-top:4px">
+      <span style="font-size:13px; color:var(--text2); font-weight:500">Record</span>
+      <div style="display:flex; align-items:center; gap:10px">
+        <button onclick="prevRecord()" style="width:36px;height:36px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">←</button>
+        <strong id="mob-record-label" style="font-family:'DM Mono',monospace;font-size:13px">1/1</strong>
+        <button onclick="nextRecord()" style="width:36px;height:36px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">→</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile FABs for Design tab panel toggle -->
+<div class="mobile-panel-toggle" id="mobile-panel-toggle" style="display:none">
+  <button class="mobile-fab" id="fab-layers" onclick="toggleMobilePanel('left')" title="Layers &amp; Tools">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="16" height="3" rx="1"/><rect x="2" y="9" width="16" height="3" rx="1"/><rect x="2" y="14" width="10" height="3" rx="1"/></svg>
+  </button>
+  <button class="mobile-fab" id="fab-props" onclick="toggleMobilePanel('right')" title="Properties">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2"/><path d="M10 2v3M10 15v3M2 10h3M15 10h3"/></svg>
+  </button>
+</div>
+
+<div class="main">
+  <!-- DESIGN TAB -->
+  <div id="tab-design" class="page" style="flex-direction:row">
+    <div class="panel-left">
+      <div class="panel-section">
+        <div class="panel-section-title">Badge Template</div>
+        <div class="form-row">
+          <label>Size Mode</label>
+          <select id="size-mode" onchange="state.sizeMode = this.value; updatePage()">
+            <option value="auto">Auto-fit Layout</option>
+            <option value="manual">Manual Size</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Orientation</label>
+          <div style="display:flex; gap:4px; flex:1">
+            <button class="btn" id="badge-portrait" onclick="setBadgeOrientation('portrait')" style="flex:1">Portrait</button>
+            <button class="btn" id="badge-landscape" onclick="setBadgeOrientation('landscape')" style="flex:1">Landscape</button>
+          </div>
+        </div>
+        <div class="form-row"><label>Width</label><input type="number" id="badge-w" value="86" oninput="updatePage()"><span>mm</span></div>
+        <div class="form-row"><label>Height</label><input type="number" id="badge-h" value="54" oninput="updatePage()"><span>mm</span></div>
+        <div class="form-row"><label>BG Color</label><input type="color" id="badge-bg" value="#ffffff" onchange="updatePage()"></div>
+        <div class="form-row"><label>Snap</label><input type="checkbox" id="snap-grid" onchange="state.snap = this.checked; saveToLocal()"><span style="font-size:11px">snap to 5px</span></div>
+        <div class="form-row" style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border)">
+          <label>Double Sided</label>
+          <input type="checkbox" id="duplex-mode" onchange="state.duplex = this.checked; updateDuplexUI(); updatePage();">
+        </div>
+        <div id="side-switcher" style="display:none; margin-bottom:12px">
+          <div class="panel-section-title" style="margin-top:10px">Editing Side</div>
+          <div class="mode-toggle">
+            <button class="mode-btn active" id="side-btn-front" onclick="setSide('front')">Front</button>
+            <button class="mode-btn" id="side-btn-back" onclick="setSide('back')">Back</button>
+          </div>
+          <div style="display:flex; gap:4px; margin-top:8px">
+            <button class="btn" style="flex:1; font-size:11px; padding:4px" onclick="copySide()" title="Copy current side to the other side">Copy to Other</button>
+            <button class="btn" style="flex:1; font-size:11px; padding:4px" onclick="flipBack()" title="Mirror elements horizontally (useful for folding)">Flip Side</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-title">Add Element</div>
+        <div class="tools-grid">
+          <button class="tool-btn" onclick="addElement('rect')"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="16" height="12" rx="1"/></svg>Rect</button>
+          <button class="tool-btn" onclick="addElement('ellipse')"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="10" cy="10" rx="8" ry="6"/></svg>Oval</button>
+          <button class="tool-btn" onclick="addElement('line')"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="2" y1="18" x2="18" y2="2"/></svg>Line</button>
+          <button class="tool-btn" onclick="addElement('text')"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h12M10 5v10M7 15h6"/></svg>Text</button>
+          <button class="tool-btn" onclick="addElement('image')"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="16" height="14" rx="1"/><circle cx="7" cy="8" r="1.5"/><path d="M2 14l5-4 3 3 2-2 6 5"/></svg>Img</button>
+          <button class="tool-btn" onclick="addElement('qr')"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="7" height="7"/><rect x="11" y="2" width="7" height="7"/><rect x="2" y="11" width="7" height="7"/><rect x="11" y="11" width="4" height="4"/></svg>QR</button>
+        </div>
+      </div>
+      <div class="panel-section" style="flex:1">
+        <div class="panel-section-title">Layers</div>
+        <div class="layers-list" id="layers-list"></div>
+      </div>
+    </div>
+    <div class="canvas-area" id="canvas-area">
+      <div class="badge-canvas-wrapper" id="canvas-wrapper"><canvas id="badge-canvas"></canvas></div>
+      <div class="zoom-controls">
+        <button onclick="changeZoom(-0.1)" title="Zoom Out">—</button>
+        <span id="zoom-label">100%</span>
+        <button onclick="changeZoom(0.1)" title="Zoom In">+</button>
+        <button onclick="resetZoom()" title="Reset to Fit">Fit</button>
+      </div>
+    </div>
+    <div class="panel-right">
+      <div class="panel-section">
+        <div class="panel-section-title">Properties</div>
+        <div id="props-empty" class="prop-empty">Select an element</div>
+        <div id="props-panel" style="display:none"></div>
+      </div>
+      <div class="panel-section" id="vars-section" style="display:none">
+        <div class="panel-section-title">Variables</div>
+        <div id="vars-list" style="display:flex; flex-wrap:wrap; gap:4px;"></div>
+      </div>
+      <div class="panel-section" id="zorder-section" style="display:none">
+        <div class="panel-section-title">Arrange</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-bottom:8px">
+          <button class="btn" onclick="reorder('top')" style="font-size:11px">Bring Front</button>
+          <button class="btn" onclick="reorder('bottom')" style="font-size:11px">Send Back</button>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:4px">
+          <button class="btn" onclick="alignElement('left')">L</button>
+          <button class="btn" onclick="alignElement('h-center')">C</button>
+          <button class="btn" onclick="alignElement('right')">R</button>
+        </div>
+        <button class="btn danger" onclick="deleteSelected()" style="width:100%; margin-top:12px">Delete Element</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LAYOUT TAB -->
+  <div id="tab-layout" class="page active" style="flex-direction:row">
+    <div class="panel-left">
+
+      <div class="panel-section">
+        <div class="panel-section-title">Page Size</div>
+        <div class="form-row">
+          <label>Preset</label>
+          <select id="page-preset" onchange="applyPreset()">
+            <option value="custom">Custom</option>
+            <option value="a4">A4 (210×297)</option>
+            <option value="letter">Letter (216×279)</option>
+            <option value="a5">A5 (148×210)</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Orientation</label>
+          <div style="display:flex; gap:4px; flex:1">
+            <button class="btn" id="orient-portrait" onclick="setOrientation('portrait')" style="flex:1">Portrait</button>
+            <button class="btn" id="orient-landscape" onclick="setOrientation('landscape')" style="flex:1">Landscape</button>
+          </div>
+        </div>
+        <div class="form-row"><label>Width</label><input type="number" id="page-w" value="210" oninput="updatePage()"><span>mm</span></div>
+        <div class="form-row"><label>Height</label><input type="number" id="page-h" value="297" oninput="updatePage()"><span>mm</span></div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-section-title">Grid</div>
+        <div class="form-row"><label>Columns</label><input type="number" id="cols" value="2" min="1" oninput="updatePage()"></div>
+        <div class="form-row"><label>Rows</label><input type="number" id="rows" value="4" min="1" oninput="updatePage()"></div>
+        <div class="form-row"><label>Gap</label><input type="number" id="gap" value="5" min="0" oninput="updatePage()"><span>mm</span></div>
+        <div id="duplex-layout-row" class="form-row" style="display:none; margin-top:8px">
+          <label>Pairing</label>
+          <select id="duplex-layout" onchange="state.duplexLayout = this.value; updatePage()">
+            <option value="horizontal">Side-by-Side</option>
+            <option value="vertical">Top-and-Bottom</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-section-title">Margins</div>
+        <div class="form-row"><label>Top</label><input type="number" id="margin-t" value="10" oninput="updatePage()"><span>mm</span></div>
+        <div class="form-row"><label>Right</label><input type="number" id="margin-r" value="10" oninput="updatePage()"><span>mm</span></div>
+        <div class="form-row"><label>Bottom</label><input type="number" id="margin-b" value="10" oninput="updatePage()"><span>mm</span></div>
+        <div class="form-row"><label>Left</label><input type="number" id="margin-l" value="10" oninput="updatePage()"><span>mm</span></div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-section-title">Summary</div>
+        <div style="font-size:12px; line-height:1.6" id="summary-text"></div>
+      </div>
+
+    </div>
+    <div class="layout-preview-area"><div id="page-outline" class="page-outline"></div></div>
+  </div>
+
+  <!-- DATA TAB -->
+  <div id="tab-data" class="page" style="flex-direction:column">
+    <div class="csv-header">
+      <button class="btn primary" onclick="document.getElementById('csv-file').click()">Import CSV</button>
+      <input type="file" id="csv-file" accept=".csv" style="display:none" onchange="loadCSV(event)">
+      <button class="btn eb-btn" onclick="openEventbriteModal()" style="display:inline-flex; align-items:center; gap:6px">
+        <svg width="13" height="13" viewBox="0 0 20 20" fill="white"><circle cx="10" cy="10" r="9"/><path d="M7 6h6v2H9v1.5h4v2H9V13h4v2H7V6z" fill="#f05537"/></svg>
+        Eventbrite
+      </button>
+      <button class="btn" onclick="loadSampleCSV()">Load Sample Data</button>
+      <button class="btn danger" onclick="clearCSV()" id="csv-clear" style="display:none">Clear Data</button>
+      <span id="csv-count" style="font-size:12px; color:var(--text2)"></span>
+    </div>
+    <div class="csv-table-wrap" id="csv-table-wrap">
+      <div class="prop-empty" style="height:200px">No data loaded yet.</div>
+    </div>
+  </div>
+
+  <!-- PREVIEW TAB -->
+  <div id="tab-preview" class="page" style="flex-direction:column">
+    <div style="padding:14px 20px; background:var(--surface); border-bottom:1px solid var(--border); display:flex; gap:10px; align-items:center">
+      <button class="btn" onclick="renderPreview()">Refresh Preview</button>
+      <div id="pdf-progress" style="display:none; align-items:center; gap:10px; flex:1">
+        <div class="progress-bar" style="flex:1; background:var(--border); height:4px; border-radius:2px; overflow:hidden">
+          <div class="progress-fill" id="progress-fill" style="width:0%; height:100%; background:var(--accent)"></div>
+        </div>
+        <span id="progress-label" style="font-size:11px">Preparing…</span>
+      </div>
+      <span style="font-size:12px; color:var(--text2)" id="preview-info"></span>
+    </div>
+    <div class="preview-grid" id="preview-grid"></div>
+  </div>
+
+  <!-- CONFIG TAB -->
+  <div id="tab-config" class="page" style="padding:40px; background:#e8e5df; overflow:auto; flex-direction:column; align-items:center">
+    <div class="print-card">
+      <h2>Configuration &amp; Backup</h2>
+      <p>Export or import specific parts of your project.</p>
+      <div style="display:flex; flex-direction:column; gap:20px">
+
+        <div>
+          <div class="panel-section-title" style="margin-bottom:10px">Design Configuration</div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap">
+            <button class="btn" onclick="exportDesign()">Export Design JSON</button>
+            <button class="btn" onclick="document.getElementById('import-design-file').click()">Import Design JSON</button>
+            <input type="file" id="import-design-file" accept=".json" style="display:none" onchange="importDesign(event, 'design')">
+          </div>
+          <p style="margin-bottom:0; margin-top:6px">Includes elements, fonts, colors, and badge dimensions.</p>
+        </div>
+
+        <div style="padding-top:16px; border-top:1px solid var(--border)">
+          <div class="panel-section-title" style="margin-bottom:10px">Layout Configuration</div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap">
+            <button class="btn" onclick="exportLayout()">Export Layout JSON</button>
+            <button class="btn" onclick="document.getElementById('import-layout-file').click()">Import Layout JSON</button>
+            <input type="file" id="import-layout-file" accept=".json" style="display:none" onchange="importDesign(event, 'layout')">
+          </div>
+          <p style="margin-bottom:0; margin-top:6px">Includes page size, grid (rows/cols), margins, and gaps.</p>
+        </div>
+
+        <div style="padding-top:16px; border-top:1px solid var(--border)">
+          <div class="panel-section-title" style="margin-bottom:10px">Full Project</div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap">
+            <button class="btn primary" onclick="exportFull()">Export Everything</button>
+            <button class="btn" onclick="document.getElementById('import-full-file').click()">Import Everything</button>
+            <input type="file" id="import-full-file" accept=".json" style="display:none" onchange="importDesign(event, 'full')">
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- PRINT TAB -->
+  <div id="tab-print" class="page" style="flex-direction:column">
+    <div class="print-tab-layout">
+      <!-- Left Settings Panel -->
+      <div class="print-panel">
+
+        <div class="panel-section">
+          <div class="panel-section-title">Export Mode</div>
+          <div class="mode-toggle" style="flex-direction: column; gap: 4px;">
+            <button class="mode-btn active" id="mode-btn-combined" onclick="setPrintMode('combined')">Combined PDF (All Records)</button>
+            <button class="mode-btn" id="mode-btn-page" onclick="setPrintMode('page')">Individual PDF (Per Page)</button>
+            <button class="mode-btn" id="mode-btn-individual" onclick="setPrintMode('individual')">Individual PDF (Per Record)</button>
+          </div>
+          <p style="font-size:11px; color:var(--text3); margin-top:8px; line-height:1.5" id="mode-description">All badges exported into a single multi-page PDF. Best for printing in bulk.</p>
+        </div>
+
+        <div class="panel-section" id="combined-filename-section">
+          <div class="panel-section-title">PDF Filename</div>
+          <div style="display:flex; gap:6px; align-items:center; margin-bottom:8px">
+            <input type="text" id="combined-filename-input" placeholder="badges" style="flex:1; padding:5px 8px; border:1px solid var(--border2); border-radius:var(--r); font-size:12px; background:var(--surface2); color:var(--text); outline:none; font-family:'DM Mono',monospace;">
+            <span style="font-size:12px; color:var(--text3)" id="filename-extension-label">.pdf</span>
+          </div>
+          <p style="font-size:11px; color:var(--text3); line-height:1.5" id="filename-description">Name for the exported combined PDF file.</p>
+        </div>
+
+        <div class="panel-section" id="zip-settings-section" style="display:none">
+          <div style="padding:10px; background:var(--accent-light); border:1px solid var(--accent); border-radius:var(--r); display:flex; align-items:center; gap:10px">
+            <input type="checkbox" id="zip-download" checked onchange="updatePrintSummary()" style="width:15px; height:15px; cursor:pointer; accent-color:var(--accent)">
+            <div>
+              <label for="zip-download" style="font-size:12px; font-weight:500; cursor:pointer">Bundle as ZIP archive</label>
+              <div style="font-size:11px; color:var(--text3); margin-top:2px">All PDFs packaged into a single .zip download. Recommended for large exports.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-section" id="individual-naming-section" style="display:none">
+          <div class="panel-section-title">Individual File Naming</div>
+          <p style="font-size:11px; color:var(--text2); margin-bottom:10px; line-height:1.5">Build a filename template using data variables and separators. Each badge gets its own PDF.</p>
+          
+          <div style="margin-bottom:10px">
+            <div style="font-size:11px; color:var(--text3); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px">Current Template</div>
+            <div class="filename-builder" id="filename-preview-display">badge_{index}</div>
+          </div>
+
+          <div style="margin-bottom:10px">
+            <div style="font-size:11px; color:var(--text3); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px">Add Data Variable</div>
+            <div id="var-chips-container" style="display:flex; flex-wrap:wrap; gap:2px">
+              <span style="font-size:11px; color:var(--text3); font-style:italic">Load CSV data to see variables</span>
+            </div>
+          </div>
+
+          <div style="margin-bottom:10px">
+            <div style="font-size:11px; color:var(--text3); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px">Add Separator / Text</div>
+            <div style="display:flex; flex-wrap:wrap; gap:4px; align-items:center">
+              <button class="separator-btn" onclick="addFilenameToken('_', 'sep')">_</button>
+              <button class="separator-btn" onclick="addFilenameToken('-', 'sep')">-</button>
+              <button class="separator-btn" onclick="addFilenameToken('.', 'sep')">.</button>
+              <button class="separator-btn" onclick="addFilenameToken('{index}', 'meta')" title="Record number (1, 2, 3…)">#</button>
+              <input type="text" id="custom-text-input" placeholder="custom text…" style="flex:1; min-width:80px; padding:4px 8px; border:1px solid var(--border2); border-radius:var(--r); font-size:11px; background:var(--surface2); color:var(--text); outline:none; font-family:'DM Mono',monospace">
+              <button class="separator-btn" onclick="addCustomText()">Add</button>
+            </div>
+          </div>
+
+          <div style="margin-bottom:8px">
+            <div style="font-size:11px; color:var(--text3); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px">Template Tokens</div>
+            <div id="token-builder" style="display:flex; flex-wrap:wrap; gap:4px; min-height:32px; background:var(--surface2); border:1px solid var(--border2); border-radius:var(--r); padding:6px"></div>
+          </div>
+
+          <button class="btn" onclick="clearFilenameTokens()" style="font-size:11px; width:100%; margin-top:4px">Clear Template</button>
+
+          <div style="margin-top:10px; padding:8px 10px; background:var(--accent-light); border-radius:var(--r); border:1px solid var(--accent)">
+            <div style="font-size:10px; color:var(--text3); margin-bottom:3px">EXAMPLE OUTPUT</div>
+            <div style="font-size:12px; font-family:'DM Mono',monospace; color:var(--accent); word-break:break-all" id="filename-example-output">badge_1.pdf</div>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="panel-section-title">Record Range</div>
+          <p style="font-size:11px; color:var(--text3); margin-bottom:10px; line-height:1.5">Optionally limit which records to export. Leave end blank for all records.</p>
+          <div class="range-row">
+            <span style="font-size:12px; color:var(--text2); width:40px">From</span>
+            <input type="number" id="range-from" placeholder="1" min="1">
+            <span style="font-size:12px; color:var(--text2); width:20px">to</span>
+            <input type="number" id="range-to" placeholder="all" min="1">
+            <span style="font-size:11px; color:var(--text3)" id="range-count-label"></span>
+          </div>
+          <button class="btn" onclick="resetRange()" style="font-size:11px; margin-top:8px">Reset to All</button>
+        </div>
+
+      </div>
+
+      <!-- Right: Summary + Action -->
+      <div class="print-main">
+        <div class="print-card">
+          <h2>Export Summary</h2>
+          <p>Review your settings before exporting.</p>
+          <div style="display:flex; flex-direction:column; gap:10px; font-size:13px" id="print-summary">
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border)"><span style="color:var(--text2)">Records loaded</span><b id="ps-records">0</b></div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border)"><span style="color:var(--text2)">Records to export</span><b id="ps-export-count">0</b></div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border)"><span style="color:var(--text2)">Mode</span><b id="ps-mode">Combined PDF</b></div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border)" id="ps-files-row"><span style="color:var(--text2)">Files to create</span><b id="ps-files">1 PDF</b></div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border)"><span style="color:var(--text2)">Badges per page</span><b id="ps-bpp">–</b></div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0"><span style="color:var(--text2)">Page size</span><b id="ps-page">–</b></div>
+          </div>
+        </div>
+
+        <div class="print-card">
+          <h2>Export</h2>
+          <p id="export-card-desc">Click below to start the export. Individual PDFs will download one by one.</p>
+
+          <div class="batch-progress-wrap" id="batch-progress-wrap">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px">
+              <div style="flex:1; background:var(--border); height:6px; border-radius:3px; overflow:hidden">
+                <div id="batch-progress-fill" style="width:0%; height:100%; background:var(--accent); transition:width 0.2s"></div>
+              </div>
+              <span id="batch-progress-label" style="font-size:12px; color:var(--text2); font-family:'DM Mono',monospace; white-space:nowrap">0 / 0</span>
+            </div>
+            <div class="batch-log" id="batch-log"></div>
+          </div>
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px">
+            <button class="btn primary" id="export-btn" onclick="startPrintExport()" style="flex:1; justify-content:center; padding:10px 20px; font-size:14px">
+              Export PDF
+            </button>
+            <button class="btn danger" id="cancel-btn" onclick="cancelExport()" style="display:none">Cancel</button>
+          </div>
+          <p style="font-size:11px; color:var(--text3); margin-top:8px" id="export-status-msg"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<div class="statusbar">
+  <span>Canvas: <b id="sb-size">–</b></span>
+  <span>Elements: <b id="sb-count">0</b></span>
+  <span>Records: <b id="sb-records">0</b></span>
+  <span id="sb-sel" style="display:none">Selected: <b id="sb-sel-name">–</b></span>
+</div>
+
+<div class="vars-popover" id="vars-popover"></div>
+
+<!-- ── Eventbrite Import Modal ── -->
+<div class="eb-modal-overlay" id="eb-modal-overlay" onclick="ebModalOverlayClick(event)">
+  <div class="eb-modal" id="eb-modal">
+    <div class="eb-modal-header">
+      <h3>
+        <div class="eb-logo-icon">
+          <svg viewBox="0 0 20 20"><path d="M10 2a8 8 0 1 0 0 16A8 8 0 0 0 10 2zm-1 11H7V7h2v6zm4 0h-2V7h2v6z"/></svg>
+        </div>
+        Import from Eventbrite
+      </h3>
+      <button onclick="closeEventbriteModal()" style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:20px;line-height:1;padding:4px">&#x2715;</button>
+    </div>
+    <div class="eb-modal-body">
+      <!-- Step 1: API Token -->
+      <div class="eb-step" id="eb-step-token">
+        <div class="eb-step-label">Step 1 — Private Token</div>
+        <p style="font-size:12px;color:var(--text2);line-height:1.5">Enter your Eventbrite Private Token. Find it in your Eventbrite account under <strong>Account Settings → Developer Links → API Keys</strong>.</p>
+        <div style="display:flex;gap:8px">
+          <input class="eb-input" type="password" id="eb-token-input" placeholder="Paste your private token here…" autocomplete="off" oninput="ebOnTokenInput()">
+          <button class="btn primary" id="eb-fetch-events-btn" onclick="ebFetchEvents()" style="white-space:nowrap;flex-shrink:0" disabled>Load Events</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input type="checkbox" id="eb-save-token" style="cursor:pointer;accent-color:var(--accent)">
+          <label for="eb-save-token" style="font-size:12px;color:var(--text2);cursor:pointer">Remember token in this browser</label>
+        </div>
+        <div id="eb-token-status" style="display:none"></div>
+      </div>
+      <!-- Step 2: Select Event -->
+      <div class="eb-step" id="eb-step-event" style="display:none">
+        <div class="eb-step-label">Step 2 — Select Event</div>
+        <input class="eb-input" type="text" id="eb-event-search" placeholder="Filter events by name…" oninput="ebFilterEvents()" style="margin-bottom:4px">
+        <div class="eb-events-list" id="eb-events-list">
+          <div style="padding:20px;text-align:center;color:var(--text3);font-size:12px">Loading events…</div>
+        </div>
+        <div id="eb-event-status" style="display:none"></div>
+      </div>
+      <!-- Step 3: Field preview -->
+      <div class="eb-step" id="eb-step-fields" style="display:none">
+        <div class="eb-step-label">Step 3 — Review Fields</div>
+        <div id="eb-attendee-summary" class="eb-attendee-count"></div>
+        <p style="font-size:12px;color:var(--text2);line-height:1.5;margin-top:6px">These fields will be imported. Use them as <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;font-size:11px">{{variable}}</code> placeholders in your badge design.</p>
+        <div id="eb-fields-preview" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px"></div>
+        <div id="eb-fetch-status" style="display:none"></div>
+      </div>
+    </div>
+    <div class="eb-modal-footer">
+      <button class="btn" onclick="closeEventbriteModal()">Cancel</button>
+      <button class="btn primary" id="eb-import-btn" onclick="ebImportAttendees()" disabled>Import Attendees</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+const PX_PER_MM = 3.7795;
+let state = {
+  pageW: 210, pageH: 297, cols: 2, rows: 4,
+  marginTop: 10, marginRight: 10, marginBottom: 10, marginLeft: 10, gap: 5,
+  badgeW: 86, badgeH: 54, badgeBg: '#ffffff',
+  sizeMode: 'auto', elements: [], selectedId: null, currentRecord: 0,
+  csvData: [], csvHeaders: [], snap: false, zoom: 1, darkMode: true,
+  duplex: false, duplexLayout: 'horizontal', currentSide: 'front', designs: { front: [], back: [] }
+};
+
+let canvasScale = 1, badgeWpx = 0, badgeHpx = 0, isDragging = false, dragOffX = 0, dragOffY = 0;
+const canvas = document.getElementById('badge-canvas');
+const ctx = canvas.getContext('2d');
+const imageCache = {}, qrCache = {};
+
+function wrapTextToLines(text, maxWidth, measureFn) {
+  const words = text.split(' ');
+  const lines = [];
+  let cur = '';
+  for (const w of words) {
+    const test = cur + (cur ? ' ' : '') + w;
+    if (measureFn(test) > maxWidth && cur) { lines.push(cur); cur = w; }
+    else cur = test;
+  }
+  lines.push(cur);
+  return lines;
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById('tab-btn-' + name) && document.getElementById('tab-btn-' + name).classList.add('active');
+  if (name === 'preview') renderPreview();
+  if (name === 'layout') updateLayoutPreview();
+  if (name === 'print') refreshPrintTab();
+  if (name === 'design') updatePage();
+  // Sync mobile tab bar
+  document.querySelectorAll('.mobile-tab-item').forEach(b => b.classList.remove('active'));
+  const mobTab = document.getElementById('mob-tab-' + name);
+  if (mobTab) mobTab.classList.add('active');
+  // Show/hide design FABs
+  if (isMobile()) {
+    if (name === 'design') showMobileDesignFABs(); else hideMobileDesignFABs();
+  }
+}
+
+function setSide(side) {
+  if (state.currentSide === side) return;
+  state.designs[state.currentSide] = [...state.elements];
+  state.currentSide = side;
+  state.elements = [...(state.designs[side] || [])];
+  state.selectedId = null;
+  document.getElementById('side-btn-front').classList.toggle('active', side === 'front');
+  document.getElementById('side-btn-back').classList.toggle('active', side === 'back');
+  redraw(); renderLayers(); renderProps(); updateStatus(); saveToLocal();
+}
+
+function copySide() {
+  const otherSide = state.currentSide === 'front' ? 'back' : 'front';
+  state.designs[otherSide] = JSON.parse(JSON.stringify(state.elements));
+  alert(`Copied ${state.currentSide} design to ${otherSide}.`);
+  saveToLocal();
+}
+
+function flipBack() {
+  state.elements.forEach(el => {
+    el.x = badgeWpx - el.x - el.w;
+    if (el.type === 'text') {
+      if (el.align === 'left') el.align = 'right';
+      else if (el.align === 'right') el.align = 'left';
+    }
+  });
+  redraw(); renderProps(); saveToLocal();
+}
+
+function updateDuplexUI() {
+  document.getElementById('side-switcher').style.display = state.duplex ? 'block' : 'none';
+  document.getElementById('duplex-layout-row').style.display = state.duplex ? 'flex' : 'none';
+  if (!state.duplex && state.currentSide === 'back') { setSide('front'); }
+}
+
+function updatePage() {
+  state.pageW = +document.getElementById('page-w').value || 210;
+  state.pageH = +document.getElementById('page-h').value || 297;
+  state.cols = +document.getElementById('cols').value || 1;
+  state.rows = +document.getElementById('rows').value || 1;
+  state.marginTop = +document.getElementById('margin-t').value || 0;
+  state.marginRight = +document.getElementById('margin-r').value || 0;
+  state.marginBottom = +document.getElementById('margin-b').value || 0;
+  state.marginLeft = +document.getElementById('margin-l').value || 0;
+  state.gap = +document.getElementById('gap').value || 0;
+  state.sizeMode = document.getElementById('size-mode').value;
+  state.duplexLayout = document.getElementById('duplex-layout').value;
+
+  const wInput = document.getElementById('badge-w'), hInput = document.getElementById('badge-h');
+  if (state.sizeMode === 'auto') {
+    state.badgeW = (state.pageW - state.marginLeft - state.marginRight - (state.cols - 1) * state.gap) / state.cols;
+    state.badgeH = (state.pageH - state.marginTop - state.marginBottom - (state.rows - 1) * state.gap) / state.rows;
+    wInput.value = state.badgeW.toFixed(1); hInput.value = state.badgeH.toFixed(1);
+    wInput.disabled = true; hInput.disabled = true;
+  } else {
+    state.badgeW = +wInput.value || 86; state.badgeH = +hInput.value || 54;
+    wInput.disabled = false; hInput.disabled = false;
+  }
+
+  state.badgeBg = document.getElementById('badge-bg').value;
+  document.getElementById('orient-portrait').classList.toggle('active', state.pageH >= state.pageW);
+  document.getElementById('orient-landscape').classList.toggle('active', state.pageW > state.pageH);
+  document.getElementById('badge-portrait').classList.toggle('active', state.badgeH > state.badgeW);
+  document.getElementById('badge-landscape').classList.toggle('active', state.badgeW >= state.badgeH);
+
+  document.getElementById('summary-text').innerHTML = `Page: ${state.pageW}×${state.pageH} mm<br>Grid: ${state.cols} cols × ${state.rows} rows<br>Badge: ${state.badgeW.toFixed(1)}×${state.badgeH.toFixed(1)} mm`;
+
+  const area = document.getElementById('canvas-area');
+  if (area && area.clientWidth > 0) {
+    const scaleX = (area.clientWidth - 80) / (state.badgeW * PX_PER_MM);
+    const scaleY = (area.clientHeight - 80) / (state.badgeH * PX_PER_MM);
+    canvasScale = Math.min(scaleX, scaleY, 1) * state.zoom;
+    badgeWpx = Math.round(state.badgeW * PX_PER_MM);
+    badgeHpx = Math.round(state.badgeH * PX_PER_MM);
+    canvas.width = badgeWpx; canvas.height = badgeHpx;
+    canvas.style.width = Math.round(badgeWpx * canvasScale) + 'px';
+    canvas.style.height = Math.round(badgeHpx * canvasScale) + 'px';
+    document.getElementById('zoom-label').textContent = Math.round(canvasScale * 100) + '%';
+  }
+  document.getElementById('sb-size').textContent = state.badgeW.toFixed(1) + '×' + state.badgeH.toFixed(1) + ' mm';
+  updateLayoutPreview(); redraw(); saveToLocal();
+}
+
+function getSlotInfo(i, recordsCount) {
+  if (!state.duplex) return { recordIdx: i, isBack: false, valid: i < recordsCount };
+  const bpp = state.cols * state.rows;
+  const pageIdx = Math.floor(i / bpp);
+  const localIdx = i % bpp;
+  let recordIdx, isBack;
+  if (state.duplexLayout === 'horizontal') {
+    recordIdx = pageIdx * Math.floor(bpp / 2) + Math.floor(localIdx / 2);
+    isBack = localIdx % 2 === 1;
+  } else {
+    const r = Math.floor(localIdx / state.cols);
+    const c = localIdx % state.cols;
+    const pairRow = Math.floor(r / 2);
+    isBack = r % 2 === 1;
+    recordIdx = pageIdx * (state.cols * Math.floor(state.rows / 2)) + (pairRow * state.cols + c);
+    if (r === state.rows - 1 && state.rows % 2 === 1) return { valid: false };
+  }
+  return { recordIdx, isBack, valid: recordIdx < recordsCount };
+}
+
+function updateLayoutPreview() {
+  const outline = document.getElementById('page-outline');
+  if (!outline || outline.parentElement.clientWidth === 0) return;
+  const scale = Math.min((outline.parentElement.clientWidth-80)/state.pageW, (outline.parentElement.clientHeight-80)/state.pageH);
+  outline.style.width = (state.pageW * scale) + 'px'; outline.style.height = (state.pageH * scale) + 'px';
+  let h = '';
+  const bpp = state.cols * state.rows;
+  for (let i=0; i<bpp; i++) {
+      const r = Math.floor(i / state.cols), c = i % state.cols;
+      const x = state.marginLeft + c*(state.badgeW+state.gap), y = state.marginTop + r*(state.badgeH+state.gap);
+      const fits = (x+state.badgeW <= state.pageW-state.marginRight+0.1) && (y+state.badgeH <= state.pageH-state.marginBottom+0.1);
+      const info = getSlotInfo(i, 999999);
+      let label = (state.duplex && info.valid) ? (info.isBack ? "BACK" : "FRONT") : "";
+      h += `<div class="badge-slot" style="left:${x*scale}px; top:${y*scale}px; width:${state.badgeW*scale}px; height:${state.badgeH*scale}px; border-color:${fits?'var(--accent)':'var(--danger)'}">${label}</div>`;
+  }
+  h += `<div style="position:absolute; border:1px dashed rgba(255,0,0,0.3); left:${state.marginLeft*scale}px; top:${state.marginTop*scale}px; right:${state.marginRight*scale}px; bottom:${state.marginBottom*scale}px; pointer-events:none"></div>`;
+  outline.innerHTML = h;
+}
+
+function setOrientation(o) {
+  const w = +document.getElementById('page-w').value, h = +document.getElementById('page-h').value;
+  if ((o==='landscape' && h>w) || (o==='portrait' && w>h)) { document.getElementById('page-w').value = h; document.getElementById('page-h').value = w; }
+  updatePage();
+}
+
+function setBadgeOrientation(o) {
+  if (state.sizeMode === 'auto') {
+    const c = +document.getElementById('cols').value, r = +document.getElementById('rows').value;
+    const bW = (state.pageW-state.marginLeft-state.marginRight-(c-1)*state.gap)/c;
+    const bH = (state.pageH-state.marginTop-state.marginBottom-(r-1)*state.gap)/r;
+    if ((o==='landscape' && bH > bW) || (o==='portrait' && bW > bH)) { document.getElementById('cols').value = r; document.getElementById('rows').value = c; }
+  } else {
+    const w = +document.getElementById('badge-w').value, h = +document.getElementById('badge-h').value;
+    if ((o==='landscape' && h>w) || (o==='portrait' && w>h)) { document.getElementById('badge-w').value = h; document.getElementById('badge-h').value = w; }
+  }
+  updatePage();
+}
+
+function addElement(type) {
+  const cx = badgeWpx/2, cy = badgeHpx/2;
+  let count = 1, name = type + '_' + count;
+  while(state.elements.find(e => e.name === name)) { count++; name = type + '_' + count; }
+  let el = { id: Date.now(), type, x: Math.round(cx-40), y: Math.round(cy-20), w: 80, h: 40, rotation: 0, name };
+  if (type==='text') el = {...el, text: 'Text', fontSize: 16, fontWeight: 'bold', color: '#1a1916', align: 'center', fontFamily: 'DM Sans, sans-serif', allCaps: false};
+  else if (type==='rect' || type==='ellipse') el = {...el, fill: '#3b82f6', stroke: 'none', strokeW: 1, rx: 4};
+  else if (type==='line') el = {...el, stroke: '#000000', strokeW: 2, w: 80, h: 4};
+  else if (type==='qr') el = {...el, qrData: '', mappings: { firstName: '', lastName: '', org: '', title: '', tel: '', email: '' }, w: 50, h: 50};
+  else if (type==='image') el = {...el, src: '', w: 50, h: 50};
+  state.elements.push(el); state.selectedId = el.id;
+  if(type==='text') updateProp('fontSize', el.fontSize);
+  updatePage(); renderLayers(); renderProps();
+}
+
+function deleteSelected() { if (!state.selectedId) return; state.elements = state.elements.filter(e => e.id !== state.selectedId); state.selectedId = null; redraw(); renderLayers(); renderProps(); updateStatus(); saveToLocal(); }
+
+function getVCardData(record, mappings) {
+  if (!record || !mappings) return '';
+  const firstName = record[mappings.firstName] || '',
+        lastName = record[mappings.lastName] || '',
+        org = record[mappings.org] || '',
+        title = record[mappings.title] || '',
+        tel = record[mappings.tel] || '',
+        email = record[mappings.email] || '';
+  const fn = [firstName, lastName].filter(Boolean).join(' ');
+  if (!fn && !org && !title && !tel && !email) return '';
+
+  let lines = ['BEGIN:VCARD', 'VERSION:3.0'];
+  if (fn) lines.push(`FN:${fn}`);
+  if (lastName || firstName) lines.push(`N:${lastName};${firstName};;;`);
+  if (org) lines.push(`ORG:${org}`);
+  if (title) lines.push(`TITLE:${title}`);
+  
+  if (tel) {
+    let t = tel.trim();
+    // Converting UK 07... numbers to +44... format.
+    // This is the most reliable way to stop Android from misinterpreting the number
+    // as a US number and adding hyphens, while keeping the QR code generation stable.
+    if (/^0\d{10}$/.test(t)) {
+      t = '+44' + t.slice(1);
+    }
+    lines.push(`TEL;TYPE=CELL,VOICE;VALUE=text:${t}`);
+  }
+  
+  if (email) lines.push(`EMAIL;TYPE=INTERNET,WORK:${email}`);
+  lines.push('END:VCARD');
+  return lines.join('\n');
+}
+
+function drawElement(el, ctx, record) {
+  ctx.save();
+  try {
+  const cx = el.x + el.w / 2, cy = el.y + el.h / 2;
+  ctx.translate(cx, cy); ctx.rotate((el.rotation || 0) * Math.PI / 180); ctx.translate(-cx, -cy);
+  if (el.type === 'rect') {
+    ctx.beginPath(); 
+    if(el.rx) {
+        const x=el.x, y=el.y, w=el.w, h=el.h, r=el.rx;
+        ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+        ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+        ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+        ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y);
+    } else { ctx.rect(el.x, el.y, el.w, el.h); }
+    if (el.fill && el.fill !== 'none') { ctx.fillStyle = el.fill; ctx.fill(); }
+    if (el.stroke && el.stroke !== 'none') { ctx.strokeStyle = el.stroke; ctx.lineWidth = el.strokeW || 1; ctx.stroke(); }
+  } else if (el.type === 'ellipse') {
+    ctx.beginPath(); ctx.ellipse(el.x+el.w/2, el.y+el.h/2, el.w/2, el.h/2, 0, 0, Math.PI*2);
+    if (el.fill && el.fill !== 'none') { ctx.fillStyle = el.fill; ctx.fill(); }
+    if (el.stroke && el.stroke !== 'none') { ctx.strokeStyle = el.stroke; ctx.lineWidth = el.strokeW || 1; ctx.stroke(); }
+  } else if (el.type === 'line') {
+    ctx.beginPath(); ctx.moveTo(el.x, el.y + el.h/2); ctx.lineTo(el.x + el.w, el.y + el.h/2);
+    ctx.strokeStyle = el.stroke || '#000000'; ctx.lineWidth = el.strokeW || 1; ctx.stroke();
+  } else if (el.type === 'text') {
+    let t = (el.text || '').replace(/\{\{(.+?)\}\}/g, (_, k) => record ? (record[k.trim()] || _) : _);
+    if (el.allCaps) t = t.toUpperCase();
+    ctx.fillStyle = el.color || '#000000'; ctx.font = `${el.fontStyle||''} ${el.fontWeight||'normal'} ${el.fontSize||14}px ${el.fontFamily||'sans-serif'}`;
+    ctx.textAlign = el.align || 'left'; ctx.textBaseline = 'top';
+    const tx = el.align==='center'?el.x+el.w/2:(el.align==='right'?el.x+el.w:el.x);
+    const lines = wrapTextToLines(t, el.w, s => ctx.measureText(s).width);
+    lines.forEach((line, i) => {
+        const ly = el.y + i * (el.fontSize * 1.2); ctx.fillText(line, tx, ly);
+        if(el.underline) { 
+            const m = ctx.measureText(line); let ux = tx; if(el.align==='center') ux = tx-m.width/2; else if(el.align==='right') ux = tx-m.width;
+            ctx.beginPath(); ctx.moveTo(ux, ly+el.fontSize*1.1); ctx.lineTo(ux+m.width, ly+el.fontSize*1.1); ctx.strokeStyle = el.color; ctx.lineWidth = Math.max(1, el.fontSize/15); ctx.stroke();
+        }
+    });
+  } else if (el.type === 'qr') {
+    let fData = el.qrData || '';
+    if (el.mappings && record) {
+      fData = getVCardData(record, el.mappings);
+    } else if (fData.includes('{{') && record) { fData = fData.replace(/\{\{(.+?)\}\}/g, (_, k) => record[k.trim()] || _); }
+    if(fData) { const q = getQRImage(fData, el.w, el.h); if(q) ctx.drawImage(q, el.x, el.y, el.w, el.h); }
+    else { ctx.strokeStyle = '#ccc'; ctx.setLineDash([2, 2]); ctx.strokeRect(el.x, el.y, el.w, el.h); ctx.setLineDash([]); }
+  } else if (el.type === 'image') {
+    if (el.src) { const img = imageCache[el.src]; if (img) ctx.drawImage(img, el.x, el.y, el.w, el.h); else loadImageToCache(el.src); }
+    else { ctx.strokeStyle='#ccc'; ctx.setLineDash([2, 2]); ctx.strokeRect(el.x, el.y, el.w, el.h); ctx.setLineDash([]); }
+  }
+  } catch(e) { console.warn('drawElement error:', e); }
+  ctx.restore();
+}
+
+function redraw() {
+  const rec = state.csvData[state.currentRecord];
+  ctx.fillStyle = state.badgeBg; ctx.fillRect(0,0,canvas.width,canvas.height);
+  state.elements.forEach(el => drawElement(el, ctx, rec));
+  if (state.selectedId) {
+    const el = state.elements.find(e => e.id === state.selectedId);
+    if (el) { 
+      ctx.save(); 
+      const cx = el.x + el.w / 2, cy = el.y + el.h / 2;
+      ctx.translate(cx, cy); ctx.rotate((el.rotation || 0) * Math.PI / 180); ctx.translate(-cx, -cy);
+      ctx.strokeStyle = '#2a5c8a'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]); ctx.strokeRect(el.x-2, el.y-2, el.w+4, el.h+4); ctx.restore(); 
+    }
+  }
+}
+
+function getQRImage(data, w, h) {
+  const key = `${data}_${w}_${h}`; if (qrCache[key]) return qrCache[key];
+  const div = document.createElement('div');
+  try { new QRCode(div, { text: data, width: 256, height: 256, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M }); } catch(e) { return null; }
+  const qcan = div.querySelector('canvas');
+  if (qcan) {
+    const img = new Image(); img.src = qcan.toDataURL();
+    img.onload = () => redraw();
+    qrCache[key] = img; return img;
+  }
+  return null;
+}
+
+// Async version for export — returns a Promise<HTMLImageElement> that resolves once loaded
+function getQRImageAsync(data) {
+  const key = `qr_${data}`;
+  if (qrCache[key] && qrCache[key].complete && qrCache[key].naturalWidth > 0) {
+    return Promise.resolve(qrCache[key]);
+  }
+  return new Promise((resolve) => {
+    // If already in cache but not yet loaded, wait for it
+    if (qrCache[key]) {
+      const existing = qrCache[key];
+      if (existing.complete) { resolve(existing); return; }
+      existing.addEventListener('load', () => resolve(existing), { once: true });
+      existing.addEventListener('error', () => resolve(null), { once: true });
+      return;
+    }
+    const div = document.createElement('div');
+    try {
+      new QRCode(div, { text: data, width: 256, height: 256, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M });
+    } catch(e) { resolve(null); return; }
+    const qcan = div.querySelector('canvas');
+    if (!qcan) { resolve(null); return; }
+    const img = new Image();
+    img.onload = () => { qrCache[key] = img; resolve(img); };
+    img.onerror = () => resolve(null);
+    img.src = qcan.toDataURL();
+  });
+}
+
+// Pre-generate all QR images needed for an array of records + elements, returns when all are loaded
+async function preloadQRImages(records, elements) {
+  const promises = [];
+  for (const el of elements) {
+    if (el.type !== 'qr') continue;
+    for (const record of records) {
+      let fData = el.qrData || '';
+      if (el.mappings && record) {
+        fData = getVCardData(record, el.mappings);
+      } else if (fData.includes('{{') && record) {
+        fData = fData.replace(/\{\{(.+?)\}\}/g, (_, k) => record[k.trim()] || _);
+      }
+      if (fData) promises.push(getQRImageAsync(fData));
+    }
+  }
+  // Process in batches of 20 to avoid overwhelming the browser
+  const batchSize = 20;
+  for (let i = 0; i < promises.length; i += batchSize) {
+    await Promise.all(promises.slice(i, i + batchSize));
+    await new Promise(r => setTimeout(r, 0)); // yield to UI
+  }
+}
+
+function loadImageToCache(src) { if (imageCache[src]) return; const img = new Image(); img.onload = () => { imageCache[src] = img; redraw(); }; img.src = src; }
+function handleImageUpload(e) {
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => { updateProp('src', ev.target.result); };
+  reader.readAsDataURL(file);
+}
+
+function renderLayers() {
+  const l = document.getElementById('layers-list');
+  if(!state.elements.length) { l.innerHTML = '<div style="font-size:12px;opacity:0.5;padding:4px">No layers</div>'; return; }
+  l.innerHTML = [...state.elements].reverse().map(el => `<div class="layer-item ${el.id===state.selectedId?'selected':''}" onclick="selectLayer(${el.id})"><div class="layer-dot" style="background:${el.fill||el.color||el.stroke||'#888'}"></div><span class="layer-name">${el.name}</span><button class="layer-del" onclick="delLayer(event, ${el.id})">✕</button></div>`).join('');
+}
+function selectLayer(id) { state.selectedId=id; redraw(); renderProps(); renderLayers(); updateStatus(); }
+function delLayer(e, id) { e.stopPropagation(); state.elements = state.elements.filter(el => el.id !== id); if (state.selectedId === id) state.selectedId = null; redraw(); renderLayers(); renderProps(); updateStatus(); saveToLocal(); }
+
+function renderProps() {
+  const el = state.elements.find(e => e.id === state.selectedId);
+  const p = document.getElementById('props-panel'), zs = document.getElementById('zorder-section'), vs = document.getElementById('vars-section');
+  if (!el) { document.getElementById('props-empty').style.display='flex'; p.style.display='none'; zs.style.display='none'; vs.style.display='none'; return; }
+  document.getElementById('props-empty').style.display='none'; p.style.display='block'; zs.style.display='block'; vs.style.display = state.csvHeaders.length ? 'block' : 'none';
+  if(state.csvHeaders.length) { document.getElementById('vars-list').innerHTML = state.csvHeaders.map(h => `<span style="background:var(--accent-light);color:var(--accent);font-size:10px;padding:2px 4px;border-radius:3px;cursor:pointer" onclick="insertVar('{{${h}}}')">{{${h}}}</span>`).join(''); }
+  let h = `<div class="prop-row"><label>Name</label><input type="text" value="${el.name}" oninput="updateProp('name',this.value)"></div>` +
+          `<div class="prop-row"><label>X / Y</label><div style="display:flex;gap:4px;flex:1;min-width:0"><input type="number" value="${el.x}" oninput="updateProp('x',+this.value)"><input type="number" value="${el.y}" oninput="updateProp('y',+this.value)"></div></div>` +
+          `<div class="prop-row"><label>W / H</label><div style="display:flex;gap:4px;flex:1;min-width:0"><input type="number" value="${el.w}" oninput="updateProp('w',+this.value)">${el.type==='line'?'':`<input type="number" value="${el.h}" oninput="updateProp('h',+this.value)">`}</div></div>` +
+          `<div class="prop-row"><label>Rotation</label><input type="number" value="${el.rotation||0}" oninput="updateProp('rotation',+this.value)"></div>`;
+  if(el.type==='text') {
+    h += `<div class="prop-row"><label>Text</label><textarea oninput="updateProp('text',this.value)">${el.text}</textarea></div>`;
+    h += `<div class="prop-row"><label>Font</label><select onchange="updateProp('fontFamily',this.value)"><option value="DM Sans, sans-serif" ${el.fontFamily.includes('DM Sans')?'selected':''}>DM Sans</option><option value="DM Mono, monospace" ${el.fontFamily.includes('DM Mono')?'selected':''}>DM Mono</option><option value="Arial, sans-serif" ${el.fontFamily==='Arial, sans-serif'?'selected':''}>Arial</option></select></div>`;
+    h += `<div class="prop-row"><label>Size</label><input type="number" value="${el.fontSize}" oninput="updateProp('fontSize',+this.value)"></div>`;
+    h += `<div class="prop-row"><label>Color</label><input type="color" value="${el.color||'#000000'}" onchange="updateProp('color',this.value)"></div>`;
+    h += `<div class="prop-row"><label>Style</label><div style="display:flex;gap:4px;flex:1"><button class="btn ${el.fontWeight==='bold'?'active':''}" onclick="updateProp('fontWeight', state.elements.find(e=>e.id===state.selectedId).fontWeight==='bold'?'normal':'bold')" style="flex:1;padding:4px">B</button><button class="btn ${el.fontStyle==='italic'?'active':''}" onclick="updateProp('fontStyle', state.elements.find(e=>e.id===state.selectedId).fontStyle==='italic'?'normal':'italic')" style="flex:1;padding:4px">I</button><button class="btn ${el.underline?'active':''}" onclick="updateProp('underline', !state.elements.find(e=>e.id===state.selectedId).underline)" style="flex:1;padding:4px">U</button><button class="btn ${el.allCaps?'active':''}" onclick="updateProp('allCaps', !state.elements.find(e=>e.id===state.selectedId).allCaps)" style="flex:1;padding:4px" title="All Caps">AA</button></div></div>`;
+  }
+  if(el.type === 'qr') {
+    h += `<div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border)"><div class="panel-section-title" style="margin-bottom:8px">vCard Mappings</div>`;
+    const flds = [{k:'firstName',l:'First Name'},{k:'lastName',l:'Last Name'},{k:'org',l:'Company'},{k:'title',l:'Job Title'},{k:'tel',l:'Phone'},{k:'email',l:'Email'}];
+    flds.forEach(f => { h += `<div class="prop-row"><label>${f.l}</label><select onchange="updateQRMapping('${f.k}', this.value)"><option value="">-- None --</option>${state.csvHeaders.map(head => `<option value="${head}" ${el.mappings?.[f.k] === head ? 'selected' : ''}>${head}</option>`).join('')}</select></div>`; });
+    h += `</div>`;
+  }
+  if(['rect','ellipse','line'].includes(el.type)) {
+     if(el.type !== 'line') h += `<div class="prop-row"><label>Fill</label><input type="color" value="${el.fill && el.fill!=='none' ? el.fill : '#ffffff'}" onchange="updateProp('fill',this.value)"></div>`;
+     h += `<div class="prop-row"><label>Stroke</label><div style="display:flex;gap:4px;flex:1"><input type="color" value="${el.stroke && el.stroke!=='none' ? el.stroke : '#000000'}" onchange="updateProp('stroke',this.value)"><button class="btn ${el.stroke==='none'?'active':''}" onclick="updateProp('stroke', 'none')" style="padding:4px">None</button></div></div>`;
+     h += `<div class="prop-row"><label>Stroke W</label><input type="number" value="${el.strokeW||1}" oninput="updateProp('strokeW',+this.value)"></div>`;
+  }
+  if(el.type === 'image') {
+    h += `<div class="prop-row"><label>Source URL</label><input type="text" value="${el.src||''}" oninput="updateProp('src',this.value)" placeholder="https://..."></div>`;
+    h += `<div class="prop-row"><label></label><button class="btn" onclick="document.getElementById('img-upload').click()" style="width:100%">Upload Local File</button><input type="file" id="img-upload" style="display:none" onchange="handleImageUpload(event)" accept="image/*"></div>`;
+  }
+  p.innerHTML = h;
+}
+function updateProp(k, v) { 
+  const el = state.elements.find(e => e.id === state.selectedId); 
+  if(el){ 
+    el[k]=v; 
+    if(k==='src') loadImageToCache(v);
+    if(el.type==='text' && (k==='fontSize' || k==='text' || k==='fontFamily' || k==='fontWeight' || k==='allCaps')) {
+       ctx.font = `${el.fontStyle||''} ${el.fontWeight||'normal'} ${el.fontSize}px ${el.fontFamily||'sans-serif'}`;
+       let text = (el.text || 'Text').replace(/\{\{(.+?)\}\}/g, 'W');
+       if (el.allCaps) text = text.toUpperCase();
+       const m = ctx.measureText(text);
+       el.w = Math.ceil(m.width) + 10;
+       el.h = Math.ceil(el.fontSize * 1.2);
+    }
+    redraw(); saveToLocal(); updateStatus(); 
+    if(k === 'name' || k === 'stroke') { renderLayers(); renderProps(); } 
+  } 
+}
+function updateQRMapping(f, v) { const el = state.elements.find(e => e.id === state.selectedId); if(el && el.type === 'qr'){ if(!el.mappings) el.mappings = {}; el.mappings[f] = v; redraw(); saveToLocal(); } }
+function insertVar(v) { const el = state.elements.find(e => e.id === state.selectedId); if(el && el.type==='text'){ el.text += v; updateProp('text', el.text); redraw(); renderProps(); } }
+
+function updateStatus() {
+  document.getElementById('sb-count').textContent = state.elements.length; document.getElementById('sb-records').textContent = state.csvData.length;
+  const sel = state.elements.find(e => e.id === state.selectedId); document.getElementById('sb-sel').style.display = sel ? '' : 'none'; if(sel) document.getElementById('sb-sel-name').textContent = sel.name;
+}
+
+function renderPreview() {
+  const grid = document.getElementById('preview-grid'); grid.innerHTML = '';
+  const bpp = state.cols * state.rows;
+  const records = state.csvData.length ? state.csvData : [null];
+  let recordsPerPage = state.duplex ? (state.duplexLayout === 'horizontal' ? Math.floor(bpp / 2) : state.cols * Math.floor(state.rows / 2)) : bpp;
+  const pages = Math.ceil(records.length / (recordsPerPage || 1));
+  const scale = 0.6, pW = state.pageW*PX_PER_MM*scale, pH = state.pageH*PX_PER_MM*scale;
+  const bW = state.badgeW*PX_PER_MM*scale, bH = state.badgeH*PX_PER_MM*scale;
+  document.getElementById('preview-info').textContent = `${records.length} records ${state.duplex?'(double-sided)':''} / ${pages} page${pages!==1?'s':''}`;
+  for (let p=0; p<pages; p++) {
+    const pDiv = document.createElement('div'); pDiv.className = 'preview-page'; pDiv.style.width = pW+'px'; pDiv.style.height = pH+'px';
+    for (let i=0; i<bpp; i++) {
+      const globalSlotIdx = p * bpp + i, info = getSlotInfo(globalSlotIdx, records.length);
+      if (!info.valid) continue;
+      const record = records[info.recordIdx], r = Math.floor(i/state.cols), c = i%state.cols;
+      const bDiv = document.createElement('div'); bDiv.className = 'preview-badge'; bDiv.style.width = bW + 'px'; bDiv.style.height = bH + 'px';
+      bDiv.style.left = (state.marginLeft + c*(state.badgeW+state.gap))*PX_PER_MM*scale + 'px';
+      bDiv.style.top = (state.marginTop + r*(state.badgeH+state.gap))*PX_PER_MM*scale + 'px';
+      const bcan = document.createElement('canvas'); bcan.width = state.badgeW*PX_PER_MM; bcan.height = state.badgeH*PX_PER_MM; bcan.style.width = '100%'; bcan.style.height = '100%';
+      const bctx = bcan.getContext('2d'); bctx.fillStyle = state.badgeBg; bctx.fillRect(0,0,bcan.width,bcan.height);
+      const sideElements = state.duplex ? (info.isBack ? state.designs.back : state.designs.front) : state.elements;
+      (sideElements || []).forEach(el => drawElement(el, bctx, record));
+      bDiv.appendChild(bcan); pDiv.appendChild(bDiv);
+      if (state.duplex) {
+         const label = document.createElement('div'); label.style = "position:absolute; bottom:2px; right:4px; font-size:9px; color:rgba(0,0,0,0.3); font-family:sans-serif; pointer-events:none";
+         label.textContent = info.isBack ? 'BACK' : 'FRONT'; bDiv.appendChild(label);
+      }
+    }
+    grid.appendChild(pDiv);
+  }
+}
+
+async function exportPDF() {
+  const { jsPDF } = window.jspdf;
+  const records = state.csvData.length ? state.csvData : [null];
+  const bpp = state.cols * state.rows;
+  const pages = Math.ceil(records.length / bpp);
+  const pdf = new jsPDF({ unit: 'mm', format: [state.pageW, state.pageH], orientation: state.pageH > state.pageW ? 'portrait' : 'landscape' });
+  const prog = document.getElementById('pdf-progress'); prog.style.display = 'flex';
+  const fill = document.getElementById('progress-fill');
+  for (let p = 0; p < pages; p++) {
+    if (p > 0) pdf.addPage([state.pageW, state.pageH]);
+    for (let i = 0; i < bpp; i++) {
+      const idx = p * bpp + i; if (idx >= records.length && records[0] !== null) continue;
+      const record = records[idx], col = i % state.cols, row = Math.floor(i / state.cols);
+      const bX = state.marginLeft + col * (state.badgeW + state.gap), bY = state.marginTop + row * (state.badgeH + state.gap);
+      pdf.setFillColor(state.badgeBg); pdf.rect(bX, bY, state.badgeW, state.badgeH, 'F');
+      for (const el of state.elements) {
+        const x = bX + (el.x / PX_PER_MM), y = bY + (el.y / PX_PER_MM), w = el.w / PX_PER_MM, h = el.h / PX_PER_MM;
+        if (el.type === 'rect') {
+          pdf.setDrawColor(el.stroke === 'none' ? state.badgeBg : el.stroke); pdf.setFillColor(el.fill === 'none' ? state.badgeBg : el.fill);
+          const style = (el.fill !== 'none' && el.stroke !== 'none') ? 'FD' : (el.fill !== 'none' ? 'F' : 'D');
+          if (el.rx) pdf.roundedRect(x, y, w, h, el.rx / PX_PER_MM, el.rx / PX_PER_MM, style); else pdf.rect(x, y, w, h, style);
+        } else if (el.type === 'ellipse') { pdf.setFillColor(el.fill === 'none' ? state.badgeBg : el.fill); pdf.ellipse(x + w/2, y + h/2, w/2, h/2, el.fill !== 'none' ? 'F' : 'D');
+        } else if (el.type === 'line') { pdf.setDrawColor(el.stroke || '#000000'); pdf.setLineWidth((el.strokeW || 1) / PX_PER_MM); pdf.line(x, y + h/2, x + w, y + h/2);
+        } else if (el.type === 'text') {
+          let t = (el.text || '').replace(/\{\{(.+?)\}\}/g, (_, k) => record ? (record[k.trim()] || _) : _);
+          if (el.allCaps) t = t.toUpperCase();
+          if (!t) continue;
+          const fontSizePt = el.fontSize * 0.75; pdf.setFontSize(fontSizePt); pdf.setTextColor(el.color || '#000000');
+          let fontStyle = el.fontWeight === 'bold' ? (el.fontStyle === 'italic' ? 'bolditalic' : 'bold') : (el.fontStyle === 'italic' ? 'italic' : 'normal');
+          pdf.setFont(el.fontFamily.includes('Serif') ? 'times' : 'helvetica', fontStyle);
+          const _mctx = document.createElement('canvas').getContext('2d');
+          _mctx.font = `${el.fontStyle||''} ${el.fontWeight||'normal'} ${el.fontSize}px ${el.fontFamily||'sans-serif'}`;
+          const lines = wrapTextToLines(t, el.w, s => _mctx.measureText(s).width);
+          pdf.text(lines, x + (el.align === 'center' ? w/2 : (el.align === 'right' ? w : 0)), y, { align: el.align, baseline: 'top', lineHeightFactor: 1.2 });
+          if (el.underline) { pdf.setLineWidth(0.2); pdf.line(x, y + (lines.length * fontSizePt * 0.4), x + w, y + (lines.length * fontSizePt * 0.4)); }
+        } else if (el.type === 'qr') {
+          let fData = el.qrData || '';
+          if (el.mappings && record) {
+            const firstName = record[el.mappings.firstName] || '', lastName = record[el.mappings.lastName] || '', org = record[el.mappings.org] || '', title = record[el.mappings.title] || '', tel = record[el.mappings.tel] || '', email = record[el.mappings.email] || '';
+            const fn = [firstName, lastName].filter(Boolean).join(' ');
+            if (fn || org || title || tel || email) fData = `BEGIN:VCARD\nVERSION:3.0\nFN:${fn}\nN:${lastName};${firstName};;;\nORG:${org}\nTITLE:${title}\nTEL;TYPE=CELL:${tel}\nEMAIL:${email}\nEND:VCARD`;
+          } else if (fData.includes('{{') && record) fData = fData.replace(/\{\{(.+?)\}\}/g, (_, k) => record[k.trim()] || _);
+          if (fData) { const q = getQRImage(fData, 512, 512); if (q && q.complete) pdf.addImage(q, 'PNG', x, y, w, h); }
+        } else if (el.type === 'image' && el.src) { const img = imageCache[el.src]; if (img) pdf.addImage(img, 'PNG', x, y, w, h); }
+      }
+      fill.style.width = Math.round((idx + 1) / records.length * 100) + '%';
+      await new Promise(res => setTimeout(res, 0));
+    }
+  }
+  pdf.save('badges.pdf'); prog.style.display = 'none';
+}
+
+function applyPreset() {
+  const p = document.getElementById('page-preset').value, presets = { a4:[210,297], letter:[216,279], a5:[148,210] };
+  if (presets[p]) { document.getElementById('page-w').value = presets[p][0]; document.getElementById('page-h').value = presets[p][1]; }
+  updatePage();
+}
+
+function changeZoom(d) { state.zoom = Math.max(0.1, Math.min(5, state.zoom + d)); updatePage(); }
+function resetZoom() { state.zoom = 1; updatePage(); }
+function toggleDarkMode() { state.darkMode = !state.darkMode; applyTheme(); saveToLocal(); }
+function applyTheme() { document.body.setAttribute('data-theme', state.darkMode ? 'dark' : 'light'); }
+function reorder(dir) { const idx = state.elements.findIndex(e=>e.id===state.selectedId); if(idx<0) return; const el = state.elements.splice(idx,1)[0]; if(dir==='top') state.elements.push(el); else state.elements.unshift(el); redraw(); renderLayers(); saveToLocal(); }
+function alignElement(dir) { const el = state.elements.find(e=>e.id===state.selectedId); if(!el) return; if(dir==='h-center') el.x = (badgeWpx-el.w)/2; else if(dir==='left') el.x=0; else if(dir==='right') el.x=badgeWpx-el.w; redraw(); renderProps(); saveToLocal(); }
+
+function saveToLocal() {
+  state.designs[state.currentSide] = [...state.elements];
+  localStorage.setItem('badgecraft_design', JSON.stringify({...state, csvData:[], csvHeaders:[]}));
+}
+function loadFromLocal() {
+  const saved = localStorage.getItem('badgecraft_design');
+  if (saved) {
+    try {
+      const d = JSON.parse(saved);
+      if (d.elements && (!d.designs || !d.designs.front)) { d.designs = { front: d.elements, back: [] }; }
+      Object.assign(state, d);
+      state.elements = [...(state.designs[state.currentSide || 'front'] || [])];
+      updateUIFromState(); updateDuplexUI();
+    } catch(e){ console.error("Load failed", e); }
+  }
+}
+function updateUIFromState() {
+  const fields = {'page-w':'pageW','page-h':'pageH','cols':'cols','rows':'rows','margin-t':'marginTop','margin-r':'marginRight','margin-b':'marginBottom','margin-l':'marginLeft','gap':'gap','badge-w':'badgeW','badge-h':'badgeH','badge-bg':'badgeBg','snap-grid':'snap','size-mode':'sizeMode','duplex-mode':'duplex'};
+  for(let id in fields) { const el=document.getElementById(id); if(el) { if(el.type==='checkbox') el.checked=state[fields[id]]; else el.value=state[fields[id]]; } }
+  // Reset page preset to custom since we can't reverse-lookup presets
+  const presetEl = document.getElementById('page-preset'); if (presetEl) presetEl.value = 'custom';
+}
+
+function loadSampleCSV() { parseCSVData(`name,job_title,company,email,tel\nAlice Johnson,Senior Engineer,Acme Corp,alice@acme.com,+123456789\nBob Smith,Product Manager,Acme Corp,bob@acme.com,+987654321\nCarol White,Lead Designer,Acme Corp,carol@acme.com,+112233445`); }
+function loadCSV(e) { const f = e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload=(ev)=>parseCSVData(ev.target.result); r.readAsText(f); }
+function sanitizeField(s) {
+  // Strip BOM and invisible Unicode chars: zero-width space, ZWNJ, ZWJ, soft hyphen, word joiner, replacement char
+  return (s || '').replace(/[\uFEFF\u200B\u200C\u200D\u00AD\u2060\uFFFD]/g, '').trim();
+}
+function parseCSVData(text) {
+  const lines = text.replace(/^\uFEFF/, '').trim().split('\n').map(l => l.split(',').map(c => sanitizeField(c.replace(/^"|"$/g, ''))));
+  state.csvHeaders = lines[0]; state.csvData = lines.slice(1).map(row => { let o = {}; state.csvHeaders.forEach((h, i) => o[h] = row[i] || ''); return o; });
+  document.getElementById('csv-count').textContent = state.csvData.length + ' records loaded'; document.getElementById('csv-clear').style.display = 'inline-block'; onCSVLoaded();
+}
+function clearCSV() { state.csvData=[]; state.csvHeaders=[]; document.getElementById('csv-table-wrap').innerHTML='<div class="prop-empty" style="height:200px">No data loaded yet.</div>'; document.getElementById('csv-count').textContent=''; document.getElementById('csv-clear').style.display='none'; updateStatus(); redraw(); }
+function onCSVLoaded() {
+  let h = '<table><thead><tr>' + state.csvHeaders.map(head => `<th>${head}</th>`).join('') + '</tr></thead><tbody>';
+  state.csvData.slice(0, 100).forEach(row => { h += '<tr>' + state.csvHeaders.map(head => `<td>${row[head]||''}</td>`).join('') + '</tr>'; });
+  document.getElementById('csv-table-wrap').innerHTML = h + '</tbody></table>'; updateStatus(); redraw();
+}
+
+function exportDesign() { 
+  state.designs[state.currentSide] = [...state.elements];
+  const d = { version:1, designs: state.designs, badgeW: state.badgeW, badgeH: state.badgeH, badgeBg: state.badgeBg, sizeMode: state.sizeMode, duplex: state.duplex };
+  downloadJSON(d, 'design.json'); 
+}
+function exportLayout() {
+  const l = { version:1, pageW: state.pageW, pageH: state.pageH, cols: state.cols, rows: state.rows, marginTop: state.marginTop, marginRight: state.marginRight, marginBottom: state.marginBottom, marginLeft: state.marginLeft, gap: state.gap };
+  downloadJSON(l, 'layout.json');
+}
+function exportFull() { 
+  state.designs[state.currentSide] = [...state.elements];
+  // Build a clean export object with exact values to avoid floating-point drift
+  const exportState = {
+    ...state,
+    marginTop: +document.getElementById('margin-t').value,
+    marginRight: +document.getElementById('margin-r').value,
+    marginBottom: +document.getElementById('margin-b').value,
+    marginLeft: +document.getElementById('margin-l').value,
+    pageW: +document.getElementById('page-w').value,
+    pageH: +document.getElementById('page-h').value,
+    cols: +document.getElementById('cols').value,
+    rows: +document.getElementById('rows').value,
+    gap: +document.getElementById('gap').value,
+  };
+  downloadJSON(exportState, 'full-project.json'); 
+}
+function downloadJSON(obj, name) {
+  const d = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(obj, null, 2));
+  const a = document.createElement('a'); a.setAttribute("href", d); a.setAttribute("download", name); a.click();
+}
+
+function importDesign(e, type) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const d = JSON.parse(ev.target.result);
+      if (type === 'design') {
+        if (d.designs) state.designs = d.designs; else if (d.elements) state.designs = { front: d.elements, back: [] };
+        state.badgeW = d.badgeW || 86; state.badgeH = d.badgeH || 54; state.badgeBg = d.badgeBg || '#ffffff'; state.sizeMode = d.sizeMode || 'auto';
+        state.duplex = !!d.duplex; state.elements = [...(state.designs[state.currentSide] || [])];
+      } else if (type === 'layout') {
+        state.pageW = d.pageW || 210; state.pageH = d.pageH || 297; state.cols = d.cols || 2; state.rows = d.rows || 4;
+        state.marginTop = d.marginTop ?? 10; state.marginRight = d.marginRight ?? 10; state.marginBottom = d.marginBottom ?? 10; state.marginLeft = d.marginLeft ?? 10; state.gap = d.gap ?? 5;
+      } else {
+        // Full import — preserve all state fields exactly as exported
+        const csvData = state.csvData, csvHeaders = state.csvHeaders; // keep live CSV
+        Object.assign(state, d);
+        state.csvData = csvData; state.csvHeaders = csvHeaders;
+        if (!state.designs) state.designs = { front: state.elements || [], back: [] };
+        state.elements = [...(state.designs[state.currentSide || 'front'] || [])];
+        state.currentSide = state.currentSide || 'front';
+      }
+      updateUIFromState(); updateDuplexUI();
+      // Defer updatePage so the canvas area has real dimensions in the DOM
+      requestAnimationFrame(() => { updatePage(); renderLayers(); redraw(); renderProps(); });
+    } catch(err) { alert('Invalid JSON file'); }
+  };
+  reader.readAsText(file);
+}
+
+// ─── PRINT TAB ──────────────────────────────────────────────────
+let printMode = 'combined', filenameTokens = [], exportCancelled = false;
+
+function setPrintMode(mode) {
+  printMode = mode;
+  document.getElementById('mode-btn-combined').classList.toggle('active', mode === 'combined');
+  document.getElementById('mode-btn-page').classList.toggle('active', mode === 'page');
+  document.getElementById('mode-btn-individual').classList.toggle('active', mode === 'individual');
+  
+  const showCombinedFilename = (mode === 'combined' || mode === 'page');
+  const showZipSettings = (mode === 'individual' || mode === 'page');
+  const showIndividualNaming = (mode === 'individual');
+
+  document.getElementById('combined-filename-section').style.display = showCombinedFilename ? '' : 'none';
+  document.getElementById('zip-settings-section').style.display = showZipSettings ? '' : 'none';
+  document.getElementById('individual-naming-section').style.display = showIndividualNaming ? '' : 'none';
+  
+  if (mode === 'combined') {
+    document.getElementById('mode-description').textContent = 'All badges exported into a single multi-page PDF. Best for printing in bulk.';
+    document.getElementById('filename-description').textContent = 'Name for the exported combined PDF file.';
+    document.getElementById('filename-extension-label').textContent = '.pdf';
+  } else if (mode === 'page') {
+    document.getElementById('mode-description').textContent = 'Each layout page is exported as its own separate PDF file. Useful for splitting large jobs.';
+    document.getElementById('filename-description').textContent = 'Base name for the exported page files or ZIP archive.';
+  } else {
+    document.getElementById('mode-description').textContent = 'Each record is exported as its own separate PDF file. Good for digital distribution.';
+  }
+  updatePrintSummary();
+}
+
+function refreshPrintTab() {
+  const container = document.getElementById('var-chips-container');
+  if (state.csvHeaders.length) { container.innerHTML = state.csvHeaders.map(h => `<span class="var-chip" onclick="addFilenameToken('${h}', 'var')">{${h}}</span>`).join(''); }
+  else { container.innerHTML = '<span style="font-size:11px; font-style:italic">Load CSV to see variables</span>'; }
+  updateFilenamePreview(); updatePrintSummary(); updateRangeLabel();
+}
+
+function getExportRange() {
+  const total = state.csvData.length || 1;
+  const from = Math.max(1, parseInt(document.getElementById('range-from').value) || 1);
+  const to = Math.min(total, parseInt(document.getElementById('range-to').value) || total);
+  return { from: from - 1, to: to - 1 };
+}
+
+function updateRangeLabel() {
+  const { from, to } = getExportRange(); const count = to - from + 1;
+  document.getElementById('range-count-label').textContent = `= ${count} records`;
+  updatePrintSummary();
+}
+
+function resetRange() { document.getElementById('range-from').value = ''; document.getElementById('range-to').value = ''; updateRangeLabel(); }
+
+function updatePrintSummary() {
+  const { from, to } = getExportRange(); const count = to - from + 1, bpp = state.cols * state.rows;
+  const useZip = document.getElementById('zip-download')?.checked;
+  let recordsPerPage = state.duplex ? (state.duplexLayout === 'horizontal' ? Math.floor(bpp / 2) : state.cols * Math.floor(state.rows / 2)) : bpp;
+  const pages = Math.ceil(count / (recordsPerPage || 1));
+
+  document.getElementById('ps-records').textContent = state.csvData.length;
+  document.getElementById('ps-export-count').textContent = count;
+  document.getElementById('ps-mode').textContent = printMode === 'combined' ? 'Combined PDF' : (printMode === 'page' ? 'Individual PDFs (Per Page)' : 'Individual PDFs (Per Record)');
+  document.getElementById('ps-bpp').textContent = bpp;
+  document.getElementById('ps-page').textContent = `${state.pageW}×${state.pageH} mm`;
+
+  if (printMode === 'combined') {
+    document.getElementById('ps-files').textContent = `1 PDF (${pages} pages)`;
+    document.getElementById('export-btn').textContent = `Export PDF`;
+    document.getElementById('export-card-desc').textContent = 'Click below to start the export.';
+    document.getElementById('ps-files-row').style.display = 'flex';
+  } else if (printMode === 'page') {
+    document.getElementById('ps-files').textContent = useZip ? `1 ZIP (${pages} PDFs)` : `${pages} PDFs`;
+    document.getElementById('export-btn').textContent = useZip ? `Export ZIP` : `Export ${pages} PDFs`;
+    document.getElementById('export-card-desc').textContent = useZip ? 'Each layout page will be a separate PDF in the ZIP bundle.' : 'Each page will download as an individual PDF.';
+    document.getElementById('ps-files-row').style.display = 'flex';
+    document.getElementById('filename-extension-label').textContent = useZip ? '.zip' : '.pdf';
+  } else if (printMode === 'individual') {
+    document.getElementById('ps-files').textContent = useZip ? `1 ZIP (${count} PDFs)` : `${count} PDFs`;
+    document.getElementById('export-btn').textContent = useZip ? `Export ZIP` : `Export ${count} PDFs`;
+    document.getElementById('export-card-desc').textContent = useZip ? 'All PDFs (one per record) will be bundled into a ZIP file.' : 'Individual PDFs will download one by one.';
+    document.getElementById('ps-files-row').style.display = 'flex';
+  }
+}
+
+function addFilenameToken(value, type) {
+  const label = type === 'var' ? `{${value}}` : value;
+  filenameTokens.push({ type, value, label });
+  renderTokenBuilder(); updateFilenamePreview();
+}
+
+function addCustomText() {
+  const inp = document.getElementById('custom-text-input'), v = inp.value.trim();
+  if (!v) return; addFilenameToken(v, 'text'); inp.value = '';
+}
+
+function removeToken(idx) { filenameTokens.splice(idx, 1); renderTokenBuilder(); updateFilenamePreview(); }
+function clearFilenameTokens() { filenameTokens = []; renderTokenBuilder(); updateFilenamePreview(); }
+
+function renderTokenBuilder() {
+  const container = document.getElementById('token-builder');
+  if (!filenameTokens.length) { container.innerHTML = '<span style="font-size:11px; opacity:0.5">No tokens</span>'; return; }
+  container.innerHTML = filenameTokens.map((t, i) => `<span class="token-pill"><span>${t.label}</span><span class="remove" onclick="removeToken(${i})">✕</span></span>`).join('');
+}
+
+function buildFilename(record, idx) {
+  if (!filenameTokens.length) return `badge_${idx + 1}`;
+  return filenameTokens.map(t => (t.type === 'var') ? (record ? (record[t.value] || t.value) : t.value) : (t.type === 'meta' ? (idx + 1) : t.value)).join('');
+}
+
+function updateFilenamePreview() {
+  const example = buildFilename(state.csvData[0] || null, 0);
+  document.getElementById('filename-example-output').textContent = (example || 'badge_1') + '.pdf';
+}
+
+async function startPrintExport() {
+  state.designs[state.currentSide] = [...state.elements];
+  if (printMode === 'combined') { await exportCombinedPDF(); } 
+  else if (printMode === 'page') { await exportPagePDFs(); }
+  else { await exportIndividualPDFs(); }
+}
+
+function cancelExport() { exportCancelled = true; }
+
+async function exportPagePDFs() {
+  const { jsPDF } = window.jspdf;
+  const allRecords = state.csvData.length ? state.csvData : [null];
+  const { from, to } = getExportRange();
+  const records = allRecords.slice(from, to + 1);
+  const bpp = state.cols * state.rows;
+  let recordsPerPage = state.duplex ? (state.duplexLayout === 'horizontal' ? Math.floor(bpp / 2) : state.cols * Math.floor(state.rows / 2)) : bpp;
+  const pages = Math.ceil(records.length / (recordsPerPage || 1));
+  const useZip = document.getElementById('zip-download')?.checked;
+  const wrap = document.getElementById('batch-progress-wrap'), fill = document.getElementById('batch-progress-fill'), label = document.getElementById('batch-progress-label'), cancelBtn = document.getElementById('cancel-btn'), exportBtn = document.getElementById('export-btn');
+  exportCancelled = false; wrap.style.display = 'block'; cancelBtn.style.display = ''; exportBtn.disabled = true; fill.style.width = '0%';
+
+  // Pre-generate all QR images
+  const allElements = state.duplex ? [...state.designs.front, ...state.designs.back] : state.elements;
+  const hasQR = allElements.some(el => el.type === 'qr');
+  if (hasQR) {
+    label.textContent = 'Pre-generating QR codes…';
+    await preloadQRImages(records, allElements);
+    if (exportCancelled) { wrap.style.display = 'none'; cancelBtn.style.display = 'none'; exportBtn.disabled = false; return; }
+  }
+
+  const zip = useZip ? new JSZip() : null;
+  const baseName = document.getElementById('combined-filename-input')?.value.trim() || 'page';
+
+  for (let p = 0; p < pages; p++) {
+    if (exportCancelled) break;
+
+    const pdf = new jsPDF({ unit: 'mm', format: [state.pageW, state.pageH], orientation: state.pageH > state.pageW ? 'portrait' : 'landscape' });
+    for (let i = 0; i < bpp; i++) {
+      const globalSlotIdx = p * bpp + i, info = getSlotInfo(globalSlotIdx, records.length);
+      if (!info.valid) continue;
+      const record = records[info.recordIdx], col = i % state.cols, row = Math.floor(i / state.cols);
+      const bX = state.marginLeft + col * (state.badgeW + state.gap), bY = state.marginTop + row * (state.badgeH + state.gap);
+      const elements = state.duplex ? (info.isBack ? state.designs.back : state.designs.front) : state.elements;
+      renderBadgeToPDF(pdf, record, bX, bY, elements);
+    }
+
+    const filename = `${baseName}_${p + 1}.pdf`;
+    if (useZip) {
+      zip.file(filename, pdf.output('arraybuffer'));
+    } else {
+      pdf.save(filename);
+    }
+
+    const pct = Math.round((p + 1) / pages * 100);
+    fill.style.width = pct + '%';
+    label.textContent = `Page ${p + 1} / ${pages}`;
+    await new Promise(r => setTimeout(r, 0));
+  }
+
+  if (!exportCancelled && useZip) {
+    label.textContent = 'Compressing…';
+    const zipFilename = (document.getElementById('combined-filename-input')?.value.trim() || 'badges') + '-pages.zip';
+    const blob = await zip.generateAsync({ type: 'blob' }, meta => {
+      fill.style.width = meta.percent.toFixed(0) + '%';
+      label.textContent = `Compressing… ${meta.percent.toFixed(0)}%`;
+    });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = zipFilename; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  }
+
+  wrap.style.display = 'none'; cancelBtn.style.display = 'none'; exportBtn.disabled = false;
+}
+
+async function exportCombinedPDF() {
+  const { jsPDF } = window.jspdf;
+  const allRecords = state.csvData.length ? state.csvData : [null];
+  const { from, to } = getExportRange();
+  const records = allRecords.slice(from, to + 1);
+  const bpp = state.cols * state.rows;
+  let recordsPerPage = state.duplex ? (state.duplexLayout === 'horizontal' ? Math.floor(bpp / 2) : state.cols * Math.floor(state.rows / 2)) : bpp;
+  const pages = Math.ceil(records.length / (recordsPerPage || 1));
+  const wrap = document.getElementById('batch-progress-wrap'), fill = document.getElementById('batch-progress-fill'), label = document.getElementById('batch-progress-label'), log = document.getElementById('batch-log'), cancelBtn = document.getElementById('cancel-btn'), exportBtn = document.getElementById('export-btn');
+  exportCancelled = false; wrap.style.display = 'block'; cancelBtn.style.display = ''; exportBtn.disabled = true; log.innerHTML = ''; fill.style.width = '0%';
+
+  // Pre-generate all QR images
+  const allElements = state.duplex ? [...state.designs.front, ...state.designs.back] : state.elements;
+  const hasQR = allElements.some(el => el.type === 'qr');
+  if (hasQR) {
+    label.textContent = 'Pre-generating QR codes…';
+    await preloadQRImages(records, allElements);
+    if (exportCancelled) { wrap.style.display = 'none'; cancelBtn.style.display = 'none'; exportBtn.disabled = false; return; }
+  }
+
+  const pdf = new jsPDF({ unit: 'mm', format: [state.pageW, state.pageH], orientation: state.pageH > state.pageW ? 'portrait' : 'landscape' });
+  for (let p = 0; p < pages; p++) {
+    if (exportCancelled) break;
+    if (p > 0) pdf.addPage([state.pageW, state.pageH]);
+    for (let i = 0; i < bpp; i++) {
+      const globalSlotIdx = p * bpp + i, info = getSlotInfo(globalSlotIdx, records.length);
+      if (!info.valid) continue;
+      const record = records[info.recordIdx], col = i % state.cols, row = Math.floor(i / state.cols);
+      const bX = state.marginLeft + col * (state.badgeW + state.gap), bY = state.marginTop + row * (state.badgeH + state.gap);
+      const elements = state.duplex ? (info.isBack ? state.designs.back : state.designs.front) : state.elements;
+      renderBadgeToPDF(pdf, record, bX, bY, elements);
+    }
+    const pct = Math.round((p + 1) / pages * 100); fill.style.width = pct + '%'; label.textContent = `Page ${p + 1} / ${pages}`;
+    await new Promise(r => setTimeout(r, 0));
+  }
+  if (!exportCancelled) { const filename = (document.getElementById('combined-filename-input').value.trim() || 'badges') + '.pdf'; pdf.save(filename); }
+  wrap.style.display = 'none'; cancelBtn.style.display = 'none'; exportBtn.disabled = false;
+}
+
+async function exportIndividualPDFs() {
+  const { jsPDF } = window.jspdf;
+  const allRecords = state.csvData.length ? state.csvData : [null];
+  const { from, to } = getExportRange();
+  const records = allRecords.slice(from, to + 1);
+  const useZip = document.getElementById('zip-download')?.checked;
+  const wrap = document.getElementById('batch-progress-wrap'), fill = document.getElementById('batch-progress-fill'), label = document.getElementById('batch-progress-label'), cancelBtn = document.getElementById('cancel-btn'), exportBtn = document.getElementById('export-btn');
+  exportCancelled = false; wrap.style.display = 'block'; cancelBtn.style.display = ''; exportBtn.disabled = true; fill.style.width = '0%';
+
+  // Pre-generate all QR images so they are cached and ready before PDF rendering
+  const allElements = state.duplex ? [...state.designs.front, ...state.designs.back] : state.elements;
+  const hasQR = allElements.some(el => el.type === 'qr');
+  if (hasQR) {
+    label.textContent = 'Pre-generating QR codes…';
+    await preloadQRImages(records, allElements);
+    if (exportCancelled) { wrap.style.display = 'none'; cancelBtn.style.display = 'none'; exportBtn.disabled = false; return; }
+  }
+
+  const zip = useZip ? new JSZip() : null;
+
+  for (let i = 0; i < records.length; i++) {
+    if (exportCancelled) break;
+
+    const record = records[i], globalIdx = from + i;
+    const pdf = new jsPDF({ unit: 'mm', format: [state.pageW, state.pageH], orientation: state.pageH > state.pageW ? 'portrait' : 'landscape' });
+    if (state.duplex) {
+      renderBadgeToPDF(pdf, record, state.marginLeft, state.marginTop, state.designs.front);
+      const nextX = state.marginLeft + (state.badgeW + state.gap);
+      if (nextX + state.badgeW <= state.pageW - state.marginRight) { renderBadgeToPDF(pdf, record, nextX, state.marginTop, state.designs.back); }
+      else { renderBadgeToPDF(pdf, record, state.marginLeft, state.marginTop + state.badgeH + state.gap, state.designs.back); }
+    } else { renderBadgeToPDF(pdf, record, state.marginLeft, state.marginTop, state.elements); }
+
+    const filename = (buildFilename(record, globalIdx) || `badge_${globalIdx + 1}`).replace(/[\\/:*?"<>|]/g, '_') + '.pdf';
+
+    if (useZip) {
+      zip.file(filename, pdf.output('arraybuffer'));
+    } else {
+      pdf.save(filename);
+    }
+
+    const pct = Math.round((i + 1) / records.length * 100);
+    fill.style.width = pct + '%';
+    label.textContent = `${i + 1} / ${records.length}`;
+
+    // Yield every badge to keep UI responsive and allow cancel to register
+    await new Promise(r => setTimeout(r, 0));
+  }
+
+  if (!exportCancelled && useZip) {
+    label.textContent = 'Compressing…';
+    const zipFilename = (document.getElementById('combined-filename-input')?.value.trim() || 'badges') + '-individual.zip';
+    const blob = await zip.generateAsync({ type: 'blob' }, meta => {
+      fill.style.width = meta.percent.toFixed(0) + '%';
+      label.textContent = `Compressing… ${meta.percent.toFixed(0)}%`;
+    });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = zipFilename; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  }
+
+  wrap.style.display = 'none'; cancelBtn.style.display = 'none'; exportBtn.disabled = false;
+}
+
+function renderBadgeToPDF(pdf, record, bX, bY, elements) {
+  pdf.setFillColor(state.badgeBg); pdf.rect(bX, bY, state.badgeW, state.badgeH, 'F');
+  for (const el of elements) {
+    const x = bX + (el.x / PX_PER_MM), y = bY + (el.y / PX_PER_MM), w = el.w / PX_PER_MM, h = el.h / PX_PER_MM;
+    if (el.type === 'rect') {
+      pdf.setDrawColor(el.stroke === 'none' ? state.badgeBg : el.stroke); pdf.setFillColor(el.fill === 'none' ? state.badgeBg : el.fill);
+      const style = (el.fill !== 'none' && el.stroke !== 'none') ? 'FD' : (el.fill !== 'none' ? 'F' : 'D');
+      if (el.rx) pdf.roundedRect(x, y, w, h, el.rx / PX_PER_MM, el.rx / PX_PER_MM, style); else pdf.rect(x, y, w, h, style);
+    } else if (el.type === 'ellipse') { pdf.setFillColor(el.fill === 'none' ? state.badgeBg : el.fill); pdf.ellipse(x + w/2, y + h/2, w/2, h/2, el.fill !== 'none' ? 'F' : 'D');
+    } else if (el.type === 'line') { pdf.setDrawColor(el.stroke || '#000000'); pdf.setLineWidth((el.strokeW || 1) / PX_PER_MM); pdf.line(x, y + h/2, x + w, y + h/2);
+    } else if (el.type === 'text') {
+      let t = (el.text || '').replace(/\{\{(.+?)\}\}/g, (_, k) => record ? (record[k.trim()] || _) : _);
+      if (el.allCaps) t = t.toUpperCase(); if (!t) continue;
+      const fontSizePt = el.fontSize * 0.75; pdf.setFontSize(fontSizePt); pdf.setTextColor(el.color || '#000000');
+      let fontStyle = el.fontWeight === 'bold' ? (el.fontStyle === 'italic' ? 'bolditalic' : 'bold') : (el.fontStyle === 'italic' ? 'italic' : 'normal');
+      pdf.setFont(el.fontFamily.includes('Serif') ? 'times' : 'helvetica', fontStyle);
+      const _mctx2 = document.createElement('canvas').getContext('2d');
+      _mctx2.font = `${el.fontStyle||''} ${el.fontWeight||'normal'} ${el.fontSize}px ${el.fontFamily||'sans-serif'}`;
+      const lines = wrapTextToLines(t, el.w, s => _mctx2.measureText(s).width); pdf.text(lines, x + (el.align === 'center' ? w/2 : (el.align === 'right' ? w : 0)), y, { align: el.align, baseline: 'top', lineHeightFactor: 1.2 });
+      if (el.underline) { pdf.setLineWidth(0.2); pdf.line(x, y + (lines.length * fontSizePt * 0.4), x + w, y + (lines.length * fontSizePt * 0.4)); }
+    } else if (el.type === 'qr') {
+      let fData = el.qrData || '';
+      if (el.mappings && record) {
+        fData = getVCardData(record, el.mappings);
+      } else if (fData.includes('{{') && record) fData = fData.replace(/\{\{(.+?)\}\}/g, (_, k) => record[k.trim()] || _);
+      if (fData) {
+        const q = qrCache[`qr_${fData}`];
+        if (q && q.complete && q.naturalWidth > 0) pdf.addImage(q, 'PNG', x, y, w, h);
+      }
+    } else if (el.type === 'image' && el.src) { const img = imageCache[el.src]; if (img) pdf.addImage(img, 'PNG', x, y, w, h); }
+  }
+}
+
+/* ── Mobile Support ── */
+const isMobile = () => window.innerWidth <= 900;
+
+function mobileSwitchTab(name) {
+  if (isMobile()) {
+    // Close any open panels before switching
+    closeMobilePanels();
+    hideMobileDesignFABs();
+  }
+  switchTab(name);
+  // Update mobile tab bar active state
+  document.querySelectorAll('.mobile-tab-item').forEach(b => b.classList.remove('active'));
+  const mob = document.getElementById('mob-tab-' + name);
+  if (mob) mob.classList.add('active');
+  // Show FABs only on design tab, and auto-open left panel
+  if (name === 'design' && isMobile()) {
+    showMobileDesignFABs();
+    // Auto-open layers/tools panel so users land somewhere useful
+    const leftPanel = document.querySelector('#tab-design .panel-left');
+    leftPanel.classList.add('mobile-open');
+    document.getElementById('fab-layers').classList.add('active');
+    activeMobilePanel = 'left';
+  }
+  closeMobileMore();
+}
+
+function showMobileDesignFABs() {
+  document.getElementById('mobile-panel-toggle').style.display = 'flex';
+}
+function hideMobileDesignFABs() {
+  document.getElementById('mobile-panel-toggle').style.display = 'none';
+}
+
+let activeMobilePanel = null;
+function toggleMobilePanel(side) {
+  const panel = side === 'left'
+    ? document.querySelector('#tab-design .panel-left')
+    : document.querySelector('#tab-design .panel-right');
+  const fab = side === 'left' ? document.getElementById('fab-layers') : document.getElementById('fab-props');
+  const otherPanel = side === 'left'
+    ? document.querySelector('#tab-design .panel-right')
+    : document.querySelector('#tab-design .panel-left');
+  const otherFab = side === 'left' ? document.getElementById('fab-props') : document.getElementById('fab-layers');
+
+  // If already on this panel, do nothing — cannot deselect entirely
+  if (activeMobilePanel === side) return;
+
+  // Close the other panel
+  otherPanel.classList.remove('mobile-open');
+  otherFab.classList.remove('active');
+  // Open this panel
+  panel.classList.add('mobile-open');
+  fab.classList.add('active');
+  activeMobilePanel = side;
+  // Scroll so the panel (below the canvas) is visible
+  setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+}
+
+function closeMobilePanels() {
+  document.querySelector('#tab-design .panel-left')?.classList.remove('mobile-open');
+  document.querySelector('#tab-design .panel-right')?.classList.remove('mobile-open');
+  document.getElementById('fab-layers')?.classList.remove('active');
+  document.getElementById('fab-props')?.classList.remove('active');
+  activeMobilePanel = null;
+}
+
+function openMobileMore() {
+  document.getElementById('mobile-drawer-overlay').classList.add('open');
+  document.getElementById('mobile-drawer').classList.add('open');
+  // Sync record nav in drawer
+  const hasRecords = state.csvData.length > 0;
+  const drawerNav = document.getElementById('mob-record-nav-drawer');
+  if (drawerNav) drawerNav.style.display = hasRecords ? 'flex' : 'none';
+  syncMobileRecordLabel();
+}
+
+function closeMobileMore() {
+  document.getElementById('mobile-drawer-overlay').classList.remove('open');
+  document.getElementById('mobile-drawer').classList.remove('open');
+}
+
+function syncMobileRecordLabel() {
+  const total = state.csvData.length || 1;
+  const label = document.getElementById('mob-record-label');
+  if (label) label.textContent = (state.currentRecord + 1) + ' / ' + total;
+}
+
+// Patch prevRecord/nextRecord to also update mobile label
+const _origPrev = window.prevRecord;
+const _origNext = window.nextRecord;
+
+// Touch support for canvas: convert touches to mouse events for drag
+function touchToMouse(e, type) {
+  if (e.touches.length !== 1) return;
+  e.preventDefault();
+  const touch = e.touches[0] || e.changedTouches[0];
+  const mouseEvent = new MouseEvent(type, {
+    clientX: touch.clientX, clientY: touch.clientY,
+    bubbles: true, cancelable: true, view: window
+  });
+  e.target.dispatchEvent(mouseEvent);
+}
+
+const canvasElM = document.getElementById('badge-canvas');
+canvasElM.addEventListener('touchstart', e => touchToMouse(e, 'mousedown'), { passive: false });
+canvasElM.addEventListener('touchmove', e => touchToMouse(e, 'mousemove'), { passive: false });
+canvasElM.addEventListener('touchend', e => {
+  const touch = e.changedTouches[0];
+  const mouseEvent = new MouseEvent('mouseup', { clientX: touch.clientX, clientY: touch.clientY, bubbles: true });
+  window.dispatchEvent(mouseEvent);
+}, { passive: false });
+
+// On resize, show/hide FABs appropriately
+window.addEventListener('resize', () => {
+  if (!isMobile()) {
+    hideMobileDesignFABs();
+    closeMobileMore();
+    // Ensure panels visible on desktop
+    document.querySelector('#tab-design .panel-left')?.classList.remove('mobile-open');
+    document.querySelector('#tab-design .panel-right')?.classList.remove('mobile-open');
+    document.querySelector('#tab-design .panel-left').style.display = '';
+    document.querySelector('#tab-design .panel-right').style.display = '';
+    activeMobilePanel = null;
+  } else {
+    const activeTab = document.querySelector('.page.active');
+    if (activeTab && activeTab.id === 'tab-design') {
+      showMobileDesignFABs();
+      // Auto-open left panel if nothing is open
+      if (!activeMobilePanel) {
+        const leftPanel = document.querySelector('#tab-design .panel-left');
+        leftPanel.classList.add('mobile-open');
+        document.getElementById('fab-layers').classList.add('active');
+        activeMobilePanel = 'left';
+      }
+    }
+  }
+});
+
+function init() { loadFromLocal(); applyTheme(); renderLayers(); redraw(); requestAnimationFrame(() => { updatePage(); redraw(); }); }
+const canvasEl = document.getElementById('badge-canvas');
+function canvasPt(e) { const r = canvasEl.getBoundingClientRect(); return { x: (e.clientX-r.left)/canvasScale, y: (e.clientY-r.top)/canvasScale }; }
+function hitTest(p) { 
+  for(let i=state.elements.length-1; i>=0; i--) { 
+    const el = state.elements[i], pad = el.type === 'line' ? 8 : 0;
+    if(p.x>=el.x && p.x<=el.x+el.w && p.y>=el.y-pad && p.y<=el.y+el.h+pad) return el; 
+  } 
+  return null; 
+}
+canvasEl.addEventListener('mousedown', e => { const p = canvasPt(e), hit = hitTest(p); state.selectedId = hit ? hit.id : null; if(hit) { isDragging = true; dragOffX = p.x - hit.x; dragOffY = p.y - hit.y; } redraw(); renderLayers(); renderProps(); });
+canvasEl.addEventListener('mousemove', e => { if(!isDragging) return; const p = canvasPt(e), el = state.elements.find(el=>el.id===state.selectedId); if(el) { el.x = Math.round(p.x - dragOffX); el.y = Math.round(p.y - dragOffY); if(state.snap) { el.x = Math.round(el.x/5)*5; el.y = Math.round(el.y/5)*5; } redraw(); renderProps(); } });
+window.addEventListener('mouseup', () => { if(isDragging) saveToLocal(); isDragging=false; });
+let wheelAccum = 0;
+canvasEl.addEventListener('wheel', e => { e.preventDefault(); wheelAccum += e.deltaY; const step = 100; if (Math.abs(wheelAccum) >= step) { changeZoom(wheelAccum > 0 ? -0.1 : 0.1); wheelAccum = 0; } }, { passive: false });
+window.addEventListener('resize', updatePage);
+init();
+
+
+// ─── EVENTBRITE INTEGRATION ─────────────────────────────────────────────────
+
+// Requests go to /eb-api/ which nginx proxies to https://www.eventbriteapi.com/v3/
+// Same origin — no CORS needed.
+const EB_API = '/eb-api';
+
+let ebState = {
+  token: '',
+  events: [],
+  filteredEvents: [],
+  selectedEventId: null,
+  selectedEventName: '',
+  attendees: [],
+};
+
+function openEventbriteModal() {
+  const overlay = document.getElementById('eb-modal-overlay');
+  overlay.classList.add('open');
+  // Restore saved token if present
+  const saved = localStorage.getItem('badgecraft_eb_token');
+  if (saved) {
+    document.getElementById('eb-token-input').value = saved;
+    document.getElementById('eb-save-token').checked = true;
+    document.getElementById('eb-fetch-events-btn').disabled = false;
+    ebState.token = saved;
+  }
+  // Reset steps
+  ebSetStep(1);
+}
+
+function closeEventbriteModal() {
+  document.getElementById('eb-modal-overlay').classList.remove('open');
+}
+
+function ebModalOverlayClick(e) {
+  if (e.target === document.getElementById('eb-modal-overlay')) closeEventbriteModal();
+}
+
+function ebSetStep(step) {
+  document.getElementById('eb-step-token').style.display = step >= 1 ? 'flex' : 'none';
+  document.getElementById('eb-step-event').style.display = step >= 2 ? 'flex' : 'none';
+  document.getElementById('eb-step-fields').style.display = step >= 3 ? 'flex' : 'none';
+  document.getElementById('eb-import-btn').disabled = step < 3;
+}
+
+function ebOnTokenInput() {
+  const val = document.getElementById('eb-token-input').value.trim();
+  document.getElementById('eb-fetch-events-btn').disabled = val.length < 10;
+  ebState.token = val;
+  // If token changes, reset steps
+  document.getElementById('eb-step-event').style.display = 'none';
+  document.getElementById('eb-step-fields').style.display = 'none';
+  document.getElementById('eb-import-btn').disabled = true;
+  ebHideStatus('eb-token-status');
+}
+
+function ebShowStatus(id, type, msg, loading = false) {
+  const el = document.getElementById(id);
+  el.style.display = 'flex';
+  el.className = 'eb-status ' + type;
+  el.innerHTML = (loading ? '<div class="eb-spinner"></div>' : '') + '<span>' + msg + '</span>';
+}
+
+function ebHideStatus(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'none';
+}
+
+async function ebApiFetch(path) {
+  const token = document.getElementById('eb-token-input').value.trim();
+  const res = await fetch(EB_API + path, {
+    headers: { 'Authorization': 'Bearer ' + token }
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error_description || err.error || ('HTTP ' + res.status));
+  }
+  return res.json();
+}
+
+async function ebFetchEvents() {
+  const token = document.getElementById('eb-token-input').value.trim();
+  if (!token) return;
+  ebState.token = token;
+
+  if (document.getElementById('eb-save-token').checked) {
+    localStorage.setItem('badgecraft_eb_token', token);
+  } else {
+    localStorage.removeItem('badgecraft_eb_token');
+  }
+
+  document.getElementById('eb-fetch-events-btn').disabled = true;
+  ebShowStatus('eb-token-status', 'info', 'Connecting to Eventbrite…', true);
+
+  try {
+    // Get the current user's organisations, then list their events
+    const meData = await ebApiFetch('/users/me/');
+    const orgData = await ebApiFetch('/users/me/organizations/');
+
+    let allEvents = [];
+    for (const org of (orgData.organizations || [])) {
+      let page = 1;
+      while (true) {
+        const evData = await ebApiFetch(`/organizations/${org.id}/events/?status=live,started,ended&order_by=start_desc&page=${page}&page_size=50`);
+        allEvents = allEvents.concat(evData.events || []);
+        if (!evData.pagination || !evData.pagination.has_more_items) break;
+        page++;
+        if (page > 5) break; // safety cap at 250 events
+      }
+    }
+
+    ebState.events = allEvents;
+    ebHideStatus('eb-token-status');
+
+    if (allEvents.length === 0) {
+      ebShowStatus('eb-token-status', 'error', 'No events found for this account.');
+      document.getElementById('eb-fetch-events-btn').disabled = false;
+      return;
+    }
+
+    ebShowStatus('eb-token-status', 'success', `Connected as ${meData.name || meData.emails?.[0]?.email || 'user'}. Found ${allEvents.length} event(s).`);
+    ebSetStep(2);
+    ebRenderEvents(allEvents);
+
+  } catch (e) {
+    ebHideStatus('eb-token-status');
+    ebShowStatus('eb-token-status', 'error', 'Error: ' + e.message + '. Check your token and try again.');
+    document.getElementById('eb-fetch-events-btn').disabled = false;
+  }
+}
+
+function ebFormatDate(dateStr) {
+  if (!dateStr) return '';
+  try {
+    return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch { return dateStr; }
+}
+
+function ebRenderEvents(events) {
+  const list = document.getElementById('eb-events-list');
+  if (!events.length) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px">No events match your search.</div>';
+    return;
+  }
+  list.innerHTML = events.map(ev => {
+    const start = ev.start ? ebFormatDate(ev.start.utc) : '';
+    const cap = ev.capacity ? ` · ${ev.capacity} capacity` : '';
+    const selected = ev.id === ebState.selectedEventId;
+    return `<div class="eb-event-item ${selected ? 'selected' : ''}" onclick="ebSelectEvent('${ev.id}', ${JSON.stringify(ev.name.text).replace(/"/g, '&quot;')})">
+      <div class="eb-event-dot"></div>
+      <div class="eb-event-info">
+        <div class="eb-event-name">${ev.name.text}</div>
+        <div class="eb-event-meta">${start}${cap}</div>
+      </div>
+      ${selected ? '<span class="eb-event-check">✓</span>' : ''}
+    </div>`;
+  }).join('');
+}
+
+function ebFilterEvents() {
+  const q = document.getElementById('eb-event-search').value.toLowerCase();
+  ebState.filteredEvents = q ? ebState.events.filter(e => e.name.text.toLowerCase().includes(q)) : ebState.events;
+  ebRenderEvents(ebState.filteredEvents);
+}
+
+async function ebSelectEvent(id, name) {
+  ebState.selectedEventId = id;
+  ebState.selectedEventName = name;
+  // Re-render to show selection
+  ebRenderEvents(ebState.filteredEvents.length ? ebState.filteredEvents : ebState.events);
+
+  document.getElementById('eb-step-fields').style.display = 'flex';
+  document.getElementById('eb-import-btn').disabled = true;
+  ebShowStatus('eb-fetch-status', 'info', 'Fetching attendee data…', true);
+  document.getElementById('eb-fields-preview').innerHTML = '';
+  document.getElementById('eb-attendee-summary').textContent = '';
+
+  try {
+    // Fetch first page to discover fields and get total count
+    const data = await ebApiFetch(`/events/${id}/attendees/?page=1&page_size=10`);
+    const total = data.pagination ? data.pagination.object_count : (data.attendees || []).length;
+
+    // Discover available fields from first attendee
+    const sample = (data.attendees || [])[0];
+    if (!sample) {
+      ebShowStatus('eb-fetch-status', 'error', 'No attendees found for this event.');
+      return;
+    }
+
+    // Build field list from profile + answers
+    const fields = ebGetFieldNames(sample);
+    ebState._fieldsSample = fields;
+    ebState._attendeeTotal = total;
+
+    document.getElementById('eb-attendee-summary').textContent =
+      `${total} registered attendee${total !== 1 ? 's' : ''} · ${fields.length} field${fields.length !== 1 ? 's' : ''} available`;
+
+    document.getElementById('eb-fields-preview').innerHTML = fields.map(f =>
+      `<span style="display:inline-flex;align-items:center;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);border-radius:20px;padding:2px 10px;font-size:11px;font-family:'DM Mono',monospace">{{${f}}}</span>`
+    ).join('');
+
+    ebHideStatus('eb-fetch-status');
+    document.getElementById('eb-import-btn').disabled = false;
+
+  } catch (e) {
+    ebShowStatus('eb-fetch-status', 'error', 'Error fetching attendees: ' + e.message);
+  }
+}
+
+function ebGetFieldNames(attendee) {
+  // Returns a flat list of useful field names from an attendee object
+  const fields = [];
+  const p = attendee.profile || {};
+
+  // Core profile fields
+  const coreMap = {
+    first_name: p.first_name,
+    last_name: p.last_name,
+    name: p.name,
+    email: p.email,
+    company: p.company,
+    job_title: p.job_title,
+    website: p.website,
+    blog: p.blog,
+    gender: p.gender,
+    age: p.age,
+    cell_phone: p.cell_phone,
+    work_phone: p.work_phone,
+    addresses_home_address: p.addresses?.home?.address_1,
+    addresses_home_city: p.addresses?.home?.city,
+    addresses_home_country: p.addresses?.home?.country,
+  };
+
+  for (const [k, v] of Object.entries(coreMap)) {
+    if (v !== undefined && v !== null && v !== '') fields.push(k);
+  }
+
+  // Ticket class
+  if (attendee.ticket_class_name) fields.push('ticket_class_name');
+
+  // Custom question answers
+  if (attendee.answers && attendee.answers.length) {
+    for (const ans of attendee.answers) {
+      const key = ('q_' + (ans.question || 'custom').toLowerCase().replace(/[^a-z0-9]+/g, '_')).slice(0, 50);
+      if (!fields.includes(key)) fields.push(key);
+    }
+  }
+
+  // Always include order ref
+  fields.push('order_id');
+
+  return fields;
+}
+
+function ebFlattenAttendee(attendee) {
+  const p = attendee.profile || {};
+  const row = {};
+
+  // Core profile
+  row.first_name     = p.first_name || '';
+  row.last_name      = p.last_name || '';
+  row.name           = p.name || [p.first_name, p.last_name].filter(Boolean).join(' ');
+  row.email          = p.email || '';
+  row.company        = p.company || '';
+  row.job_title      = p.job_title || '';
+  row.website        = p.website || '';
+  row.blog           = p.blog || '';
+  row.gender         = p.gender || '';
+  row.age            = p.age || '';
+  row.cell_phone     = p.cell_phone || '';
+  row.work_phone     = p.work_phone || '';
+  row.addresses_home_address = p.addresses?.home?.address_1 || '';
+  row.addresses_home_city    = p.addresses?.home?.city || '';
+  row.addresses_home_country = p.addresses?.home?.country || '';
+
+  // Ticket
+  row.ticket_class_name = attendee.ticket_class_name || '';
+
+  // Custom answers
+  if (attendee.answers) {
+    for (const ans of attendee.answers) {
+      const key = ('q_' + (ans.question || 'custom').toLowerCase().replace(/[^a-z0-9]+/g, '_')).slice(0, 50);
+      row[key] = ans.answer || '';
+    }
+  }
+
+  // Order
+  row.order_id = attendee.order_id || '';
+
+  return row;
+}
+
+async function ebImportAttendees() {
+  if (!ebState.selectedEventId) return;
+  document.getElementById('eb-import-btn').disabled = true;
+  ebShowStatus('eb-fetch-status', 'info', 'Downloading all attendees…', true);
+
+  try {
+    let allAttendees = [];
+    let page = 1;
+    let hasMore = true;
+
+    while (hasMore) {
+      const data = await ebApiFetch(`/events/${ebState.selectedEventId}/attendees/?page=${page}&page_size=200`);
+      allAttendees = allAttendees.concat(data.attendees || []);
+      hasMore = data.pagination && data.pagination.has_more_items;
+      page++;
+      // Update status
+      ebShowStatus('eb-fetch-status', 'info', `Downloading… ${allAttendees.length} of ${data.pagination?.object_count || '?'} attendees`, true);
+      if (page > 50) break; // safety (10,000 attendees max)
+    }
+
+    if (!allAttendees.length) {
+      ebShowStatus('eb-fetch-status', 'error', 'No attendees found.');
+      document.getElementById('eb-import-btn').disabled = false;
+      return;
+    }
+
+    // Flatten all attendees to rows
+    const rows = allAttendees.map(a => ebFlattenAttendee(a));
+
+    // Derive headers from all rows (union of all keys, preserving order)
+    const headerSet = new Set();
+    rows.forEach(r => Object.keys(r).forEach(k => headerSet.add(k)));
+    // Put core fields first
+    const coreOrder = ['first_name','last_name','name','email','company','job_title','ticket_class_name','cell_phone','work_phone'];
+    const headers = [
+      ...coreOrder.filter(k => headerSet.has(k)),
+      ...[...headerSet].filter(k => !coreOrder.includes(k))
+    ];
+
+    // Load into app state (same as parseCSVData)
+    state.csvHeaders = headers;
+    state.csvData = rows.map(row => {
+      const o = {};
+      headers.forEach(h => { o[h] = row[h] !== undefined ? String(row[h]) : ''; });
+      return o;
+    });
+
+    document.getElementById('csv-count').textContent = state.csvData.length + ' records loaded from Eventbrite';
+    document.getElementById('csv-clear').style.display = 'inline-block';
+    onCSVLoaded();
+
+    closeEventbriteModal();
+
+    // Switch to Data tab to show the results
+    switchTab('data');
+
+  } catch (e) {
+    ebShowStatus('eb-fetch-status', 'error', 'Import failed: ' + e.message);
+    document.getElementById('eb-import-btn').disabled = false;
+  }
+}
+
+// Pre-fill token on open if saved
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('badgecraft_eb_token');
+  if (saved) {
+    const inp = document.getElementById('eb-token-input');
+    if (inp) {
+      inp.value = saved;
+      ebState.token = saved;
+      document.getElementById('eb-fetch-events-btn').disabled = false;
+      document.getElementById('eb-save-token').checked = true;
+    }
+  }
+});
+
+</script>
+</body>
+</html>
