@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 import httpx
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 import bcrypt
@@ -61,12 +61,14 @@ def decode_token(token: str) -> dict:
 # ── Current user dependency ───────────────────────────────────────────────────
 
 def get_current_user(
+    token: Optional[str] = Query(None),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
     session: Session = Depends(get_session),
 ) -> User:
-    if not credentials:
+    token_str = credentials.credentials if credentials else token
+    if not token_str:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    payload = decode_token(credentials.credentials)
+    payload = decode_token(token_str)
     user = session.get(User, int(payload["sub"]))
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
@@ -74,13 +76,15 @@ def get_current_user(
 
 
 def get_current_user_optional(
+    token: Optional[str] = Query(None),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
     session: Session = Depends(get_session),
 ) -> Optional[User]:
-    if not credentials:
+    token_str = credentials.credentials if credentials else token
+    if not token_str:
         return None
     try:
-        payload = decode_token(credentials.credentials)
+        payload = decode_token(token_str)
         return session.get(User, int(payload["sub"]))
     except Exception:
         return None

@@ -184,7 +184,7 @@
   /* ── Print Tab ── */
   .print-tab-layout { display: flex; flex-direction: row; flex: 1; overflow: hidden; }
   .print-panel { width: 340px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; }
-  .print-main { flex: 1; padding: 40px; background: #e8e5df; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 24px; }
+  .print-main { flex: 1; padding: 40px; background: var(--surface2); overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 24px; }
   .print-card { background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); padding: 28px; width: 100%; max-width: 600px; }
   .print-card h2 { font-size: 16px; font-weight: 600; color: var(--accent); margin-bottom: 4px; }
   .print-card p { font-size: 12px; color: var(--text2); margin-bottom: 18px; }
@@ -750,7 +750,6 @@
     <button class="tab" id="tab-btn-design" onclick="switchTab('design')">Design</button>
     <button class="tab" id="tab-btn-data" onclick="switchTab('data')">Data</button>
     <button class="tab" id="tab-btn-preview" onclick="switchTab('preview')">Preview</button>
-    <button class="tab" id="tab-btn-config" onclick="switchTab('config')">Config</button>
     <button class="tab" id="tab-btn-reception" onclick="switchTab('reception')">Reception</button>
     <button class="tab" id="tab-btn-print" onclick="switchTab('print')">Print</button>
   </div>
@@ -776,6 +775,7 @@
         </div>
         <div class="user-dropdown-actions">
           <div class="user-dropdown-action" onclick="showOrgSettings()">⚙️ Org settings &amp; members</div>
+          <div class="user-dropdown-action" onclick="toggleUserMenu(false); openConfigModal()">📦 Input and Export</div>
           <div class="user-dropdown-action danger" onclick="authLogout()">← Sign out</div>
         </div>
       </div>
@@ -1042,45 +1042,6 @@
   </div>
 
   <!-- CONFIG TAB -->
-  <div id="tab-config" class="page" style="padding:40px; background:#e8e5df; overflow:auto; flex-direction:column; align-items:center">
-    <div class="print-card">
-      <h2>Configuration &amp; Backup</h2>
-      <p>Export or import specific parts of your project.</p>
-      <div style="display:flex; flex-direction:column; gap:20px">
-
-        <div>
-          <div class="panel-section-title" style="margin-bottom:10px">Design Configuration</div>
-          <div style="display:flex; gap:10px; flex-wrap:wrap">
-            <button class="btn" onclick="exportDesign()">Export Design JSON</button>
-            <button class="btn" onclick="document.getElementById('import-design-file').click()">Import Design JSON</button>
-            <input type="file" id="import-design-file" accept=".json" style="display:none" onchange="importDesign(event, 'design')">
-          </div>
-          <p style="margin-bottom:0; margin-top:6px">Includes elements, fonts, colors, and badge dimensions.</p>
-        </div>
-
-        <div style="padding-top:16px; border-top:1px solid var(--border)">
-          <div class="panel-section-title" style="margin-bottom:10px">Layout Configuration</div>
-          <div style="display:flex; gap:10px; flex-wrap:wrap">
-            <button class="btn" onclick="exportLayout()">Export Layout JSON</button>
-            <button class="btn" onclick="document.getElementById('import-layout-file').click()">Import Layout JSON</button>
-            <input type="file" id="import-layout-file" accept=".json" style="display:none" onchange="importDesign(event, 'layout')">
-          </div>
-          <p style="margin-bottom:0; margin-top:6px">Includes page size, grid (rows/cols), margins, and gaps.</p>
-        </div>
-
-        <div style="padding-top:16px; border-top:1px solid var(--border)">
-          <div class="panel-section-title" style="margin-bottom:10px">Full Project</div>
-          <div style="display:flex; gap:10px; flex-wrap:wrap">
-            <button class="btn primary" onclick="exportFull()">Export Everything</button>
-            <button class="btn" onclick="document.getElementById('import-full-file').click()">Import Everything</button>
-            <input type="file" id="import-full-file" accept=".json" style="display:none" onchange="importDesign(event, 'full')">
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </div>
-
   <!-- RECEPTION TAB -->
   <div id="tab-reception" class="page" style="flex-direction:row">
     <div class="panel-left">
@@ -1316,6 +1277,47 @@
 </div>
 
 
+<!-- ── Configuration Modal ── -->
+<div class="eb-modal-overlay" id="config-modal-overlay" onclick="if(event.target===this) closeConfigModal()">
+  <div class="eb-modal" style="max-width:500px">
+    <div class="eb-modal-header">
+      <h3>📦 Input and Export</h3>
+      <button onclick="closeConfigModal()" style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:20px;line-height:1;padding:4px">&#x2715;</button>
+    </div>
+    <div class="eb-modal-body" style="display:flex; flex-direction:column; gap:20px">
+      <div class="panel-section">
+        <div class="panel-section-title">Design Configuration</div>
+        <div style="display:flex; gap:10px; margin-bottom:8px">
+          <button class="btn" onclick="exportDesign()" style="flex:1">Export JSON</button>
+          <button class="btn" onclick="document.getElementById('import-design-file').click()" style="flex:1">Import JSON</button>
+        </div>
+        <p style="font-size:11px; color:var(--text3)">Elements, fonts, colors, and badge dimensions.</p>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-section-title">Layout Configuration</div>
+        <div style="display:flex; gap:10px; margin-bottom:8px">
+          <button class="btn" onclick="exportLayout()" style="flex:1">Export JSON</button>
+          <button class="btn" onclick="document.getElementById('import-layout-file').click()" style="flex:1">Import JSON</button>
+        </div>
+        <p style="font-size:11px; color:var(--text3)">Page size, grid (rows/cols), margins, and gaps.</p>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-section-title">Full Project Backup</div>
+        <div style="display:flex; gap:10px; margin-bottom:8px">
+          <button class="btn primary" onclick="exportFull()" style="flex:1">Export Everything</button>
+          <button class="btn" onclick="document.getElementById('import-full-file').click()" style="flex:1">Import Everything</button>
+        </div>
+        <p style="font-size:11px; color:var(--text3)">Complete backup of all settings, designs, and layout.</p>
+      </div>
+    </div>
+    <div class="eb-modal-footer">
+      <button class="btn" onclick="closeConfigModal()">Close</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const PX_PER_MM = 3.7795;
 let state = {
@@ -1343,6 +1345,14 @@ function wrapTextToLines(text, maxWidth, measureFn) {
   }
   lines.push(cur);
   return lines;
+}
+
+function openConfigModal() {
+  document.getElementById('config-modal-overlay').style.display = 'flex';
+}
+
+function closeConfigModal() {
+  document.getElementById('config-modal-overlay').style.display = 'none';
 }
 
 function switchTab(name) {
