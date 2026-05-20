@@ -60,10 +60,12 @@ class Event(SQLModel, table=True):
     org_id: int = Field(foreign_key="organisation.id", index=True)
     eventbrite_id: str = Field(index=True)
     name: str
+    design_id: Optional[int] = Field(default=None, foreign_key="badgedesign.id", nullable=True)
     start_date: Optional[str] = None
     capacity: Optional[int] = None
     status: Optional[str] = None
     synced_at: datetime = Field(default_factory=datetime.utcnow)
+
 
 
 # ── Attendees ─────────────────────────────────────────────────────────────────

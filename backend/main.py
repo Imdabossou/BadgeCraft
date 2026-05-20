@@ -8,9 +8,9 @@ from typing import Optional
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse, JSONResponse
+from fastapi.responses import RedirectResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, EmailStr
-from sqlmodel import Session, select
+from sqlmodel import Session, select, text
 
 from auth import (
     create_access_token, decode_token, get_current_user,
@@ -20,9 +20,10 @@ from auth import (
 from email_utils import send_invite_email
 from models import (
     Attendee, BadgeDesign, Event, Invite, OrgMember,
-    Organisation, User, create_db, get_session,
+    Organisation, User, create_db, get_session, engine,
 )
 from ws_manager import manager
+from pdf_utils import generate_bulk_pdf, render_badge_to_pdf
 
 BASE_URL = os.getenv("BASE_URL", "https://badgecraft.example.com")
 EB_API = "https://www.eventbriteapi.com/v3"
@@ -41,6 +42,14 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup():
     create_db()
+    try:
+        with Session(engine) as session:
+            session.exec(text("ALTER TABLE event ADD COLUMN design_id INTEGER"))
+            session.commit()
+    except Exception as e:
+        # Expected if column already exists
+        pass
+
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -393,7 +402,8 @@ async def eventbrite_proxy(
 
 class SyncAttendeesRequest(BaseModel):
     event_id: str
-    attendees: list[dict]  # raw attendee objects from Eventbrite
+    event_name: Optional[str] = None
+    attendees: list[dict]  # raw attendee objects from Eventbrite or custom CSV
 
 
 @app.post("/api/orgs/{org_id}/attendees/sync")
@@ -404,6 +414,25 @@ def sync_attendees(
     session: Session = Depends(get_session),
     _: OrgMember = Depends(require_org_role("admin")),
 ):
+    # Ensure Event exists
+    event = session.exec(
+        select(Event).where(
+            Event.org_id == org_id,
+            Event.eventbrite_id == req.event_id,
+        )
+    ).first()
+    if not event:
+        event = Event(
+            org_id=org_id,
+            eventbrite_id=req.event_id,
+            name=req.event_name or f"Event {req.event_id}",
+            status="active",
+        )
+        session.add(event)
+    elif req.event_name:
+        event.name = req.event_name
+        session.add(event)
+
     imported = 0
     for att in req.attendees:
         eb_id = att.get("id") or att.get("eventbrite_attendee_id", "")
@@ -430,6 +459,7 @@ def sync_attendees(
             imported += 1
     session.commit()
     return {"synced": len(req.attendees), "new": imported}
+
 
 
 @app.get("/api/orgs/{org_id}/attendees")
@@ -574,6 +604,127 @@ def delete_design(
     return {"ok": True}
 
 
+class UpdateDesignRequest(BaseModel):
+    name: Optional[str] = None
+    design_json: Optional[str] = None
+
+
+@app.patch("/api/orgs/{org_id}/designs/{design_id}")
+def update_design(
+    org_id: int,
+    design_id: int,
+    req: UpdateDesignRequest,
+    session: Session = Depends(get_session),
+    _: OrgMember = Depends(require_org_role("member")),
+):
+    design = session.get(BadgeDesign, design_id)
+    if not design or design.org_id != org_id:
+        raise HTTPException(404, "Design not found")
+    if req.name is not None:
+        design.name = req.name
+    if req.design_json is not None:
+        design.design_json = req.design_json
+    design.updated_at = datetime.utcnow()
+    session.add(design)
+    session.commit()
+    session.refresh(design)
+    return {"id": design.id, "name": design.name}
+
+
+@app.get("/api/orgs/{org_id}/events")
+def list_events(
+    org_id: int,
+    session: Session = Depends(get_session),
+    _: OrgMember = Depends(require_org_role("member")),
+):
+    events = session.exec(
+        select(Event).where(Event.org_id == org_id)
+    ).all()
+    return [
+        {
+            "id": e.id,
+            "event_id": e.eventbrite_id,
+            "name": e.name,
+            "status": e.status,
+            "design_id": e.design_id,
+            "start_date": e.start_date,
+            "capacity": e.capacity,
+        } for e in events
+    ]
+
+
+class CreateEventRequest(BaseModel):
+    name: str
+    event_id: Optional[str] = None
+
+
+@app.post("/api/orgs/{org_id}/events")
+def create_event(
+    org_id: int,
+    req: CreateEventRequest,
+    session: Session = Depends(get_session),
+    _: OrgMember = Depends(require_org_role("admin")),
+):
+    event_id = req.event_id or f"custom-{secrets.token_hex(8)}"
+    existing = session.exec(
+        select(Event).where(Event.org_id == org_id, Event.eventbrite_id == event_id)
+    ).first()
+    if existing:
+        raise HTTPException(400, "Event ID already exists")
+
+    event = Event(
+        org_id=org_id,
+        eventbrite_id=event_id,
+        name=req.name,
+        status="custom",
+    )
+    session.add(event)
+    session.commit()
+    session.refresh(event)
+    return {
+        "id": event.id,
+        "event_id": event.eventbrite_id,
+        "name": event.name,
+        "status": event.status,
+        "design_id": event.design_id,
+    }
+
+
+class UpdateEventRequest(BaseModel):
+    name: Optional[str] = None
+    design_id: Optional[int] = None
+
+
+@app.patch("/api/orgs/{org_id}/events/{event_id}")
+def update_event(
+    org_id: int,
+    event_id: str,
+    req: UpdateEventRequest,
+    session: Session = Depends(get_session),
+    _: OrgMember = Depends(require_org_role("admin")),
+):
+    event = session.exec(
+        select(Event).where(Event.org_id == org_id, Event.eventbrite_id == event_id)
+    ).first()
+    if not event:
+        raise HTTPException(404, "Event not found")
+    if req.name is not None:
+        event.name = req.name
+    if req.design_id is not None:
+        # Set to None if 0
+        event.design_id = req.design_id if req.design_id else None
+    session.add(event)
+    session.commit()
+    session.refresh(event)
+    return {
+        "id": event.id,
+        "event_id": event.eventbrite_id,
+        "name": event.name,
+        "status": event.status,
+        "design_id": event.design_id,
+    }
+
+
 # ════════════════════════════════════════════════════════════════════════════
 # WEBSOCKET
 # ════════════════════════════════════════════════════════════════════════════
@@ -652,3 +803,101 @@ def _attendee_dict(a: Attendee) -> dict:
 
 def _slugify(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# PDF GENERATION
+# ════════════════════════════════════════════════════════════════════════════
+
+@app.get("/api/orgs/{org_id}/events/{event_id}/pdf")
+def get_event_pdf(
+    org_id: int,
+    event_id: str,
+    session: Session = Depends(get_session),
+    _: OrgMember = Depends(require_org_role("member")),
+):
+    event = session.exec(
+        select(Event).where(Event.org_id == org_id, Event.eventbrite_id == event_id)
+    ).first()
+    if not event:
+        raise HTTPException(404, "Event not found")
+    if not event.design_id:
+        raise HTTPException(400, "No design linked to this event")
+
+    design = session.get(BadgeDesign, event.design_id)
+    if not design:
+        raise HTTPException(404, "Design not found")
+
+    attendees = session.exec(
+        select(Attendee).where(Attendee.org_id == org_id, Attendee.event_id == event_id)
+    ).all()
+    
+    if not attendees:
+        raise HTTPException(400, "No attendees found for this event")
+
+    output = io.BytesIO()
+    attendees_data = [json.loads(a.data) for a in attendees]
+    
+    generate_bulk_pdf(design.design_json, attendees_data, output)
+    output.seek(0)
+    
+    filename = f"badges_{_slugify(event.name)}.pdf"
+    return StreamingResponse(
+        output,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@app.get("/api/orgs/{org_id}/attendees/{attendee_id}/pdf")
+def get_attendee_pdf(
+    org_id: int,
+    attendee_id: int,
+    design_id: Optional[int] = None,
+    session: Session = Depends(get_session),
+    _: OrgMember = Depends(require_org_role("member")),
+):
+    att = session.get(Attendee, attendee_id)
+    if not att or att.org_id != org_id:
+        raise HTTPException(404, "Attendee not found")
+
+    # If design_id provided, use it, otherwise use event's design
+    target_design_id = design_id
+    if not target_design_id:
+        event = session.exec(
+            select(Event).where(Event.org_id == org_id, Event.eventbrite_id == att.event_id)
+        ).first()
+        if event:
+            target_design_id = event.design_id
+
+    if not target_design_id:
+        raise HTTPException(400, "No design linked to this attendee's event")
+
+    design = session.get(BadgeDesign, target_design_id)
+    if not design:
+        raise HTTPException(404, "Design not found")
+
+    output = io.BytesIO()
+    state = json.loads(design.design_json)
+    
+    # Create a single-badge PDF
+    badge_w = state.get('badgeW', 85)
+    badge_h = state.get('badgeH', 55)
+    
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import mm
+    
+    c = canvas.Canvas(output, pagesize=(badge_w * mm, badge_h * mm))
+    render_badge_to_pdf(
+        c, json.loads(att.data), 0, 0, 
+        state.get('elements', []), 
+        badge_w, badge_h, state.get('badgeBg', '#ffffff')
+    )
+    c.save()
+    output.seek(0)
+    
+    return StreamingResponse(
+        output,
+        media_type="application/pdf",
+        headers={"Content-Disposition": "inline; filename=badge.pdf"}
+    )
