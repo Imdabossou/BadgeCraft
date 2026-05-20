@@ -751,7 +751,7 @@
     <button class="tab" id="tab-btn-data" onclick="switchTab('data')">Data</button>
     <button class="tab" id="tab-btn-preview" onclick="switchTab('preview')">Preview</button>
     <button class="tab" id="tab-btn-reception" onclick="switchTab('reception')">Reception</button>
-    <button class="tab" id="tab-btn-print" onclick="switchTab('print')">Print</button>
+    <button class="tab" id="tab-btn-print" onclick="switchTab('print')" style="display:none">Print</button>
   </div>
   <div class="header-right">
     <div class="record-nav" id="record-nav" style="display:none">
@@ -1060,7 +1060,7 @@
               <option value="">(Select a design)</option>
             </select>
           </div>
-          <button class="btn primary" onclick="receptionDownloadAllBadges()">Download All Badges (PDF)</button>
+          <button class="btn primary" onclick="receptionOpenPrintWizard()">Print Options / Bulk Export</button>
           <button class="btn" onclick="receptionSyncEvent()">Sync from Eventbrite</button>
         </div>
       </div>
@@ -1360,6 +1360,13 @@ function switchTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   document.getElementById('tab-btn-' + name) && document.getElementById('tab-btn-' + name).classList.add('active');
+  
+  // Hide print tab button if not in print mode
+  if (name !== 'print') {
+    document.getElementById('tab-btn-print').style.display = 'none';
+    state.receptionMode = false;
+  }
+
   if (name === 'preview') renderPreview();
   if (name === 'layout') updateLayoutPreview();
   if (name === 'print') refreshPrintTab();
@@ -2113,7 +2120,19 @@ function updateFilenamePreview() {
   document.getElementById('filename-example-output').textContent = (example || 'badge_1') + '.pdf';
 }
 
+function receptionOpenPrintWizard() {
+  if (!BC.activeEventId) return;
+  state.receptionMode = true;
+  document.getElementById('tab-btn-print').style.display = 'inline-block';
+  switchTab('print');
+}
+
 async function startPrintExport() {
+  if (state.receptionMode && BC.activeEventId) {
+    const url = `${API}/orgs/${BC.activeOrgId}/events/${BC.activeEventId}/pdf?token=${BC.token}`;
+    window.location.href = url;
+    return;
+  }
   state.designs[state.currentSide] = [...state.elements];
   if (printMode === 'combined') { await exportCombinedPDF(); } 
   else if (printMode === 'page') { await exportPagePDFs(); }

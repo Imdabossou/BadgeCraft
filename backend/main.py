@@ -1,7 +1,9 @@
 import json
+import io
 import os
 import re
 import secrets
+import traceback
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -816,37 +818,43 @@ def get_event_pdf(
     session: Session = Depends(get_session),
     _: OrgMember = Depends(require_org_role("member")),
 ):
-    event = session.exec(
-        select(Event).where(Event.org_id == org_id, Event.eventbrite_id == event_id)
-    ).first()
-    if not event:
-        raise HTTPException(404, "Event not found")
-    if not event.design_id:
-        raise HTTPException(400, "No design linked to this event")
+    try:
+        event = session.exec(
+            select(Event).where(Event.org_id == org_id, Event.eventbrite_id == event_id)
+        ).first()
+        if not event:
+            raise HTTPException(404, "Event not found")
+        if not event.design_id:
+            raise HTTPException(400, "No design linked to this event")
 
-    design = session.get(BadgeDesign, event.design_id)
-    if not design:
-        raise HTTPException(404, "Design not found")
+        design = session.get(BadgeDesign, event.design_id)
+        if not design:
+            raise HTTPException(404, "Design not found")
 
-    attendees = session.exec(
-        select(Attendee).where(Attendee.org_id == org_id, Attendee.event_id == event_id)
-    ).all()
-    
-    if not attendees:
-        raise HTTPException(400, "No attendees found for this event")
+        attendees = session.exec(
+            select(Attendee).where(Attendee.org_id == org_id, Attendee.event_id == event_id)
+        ).all()
+        
+        if not attendees:
+            raise HTTPException(400, "No attendees found for this event")
 
-    output = io.BytesIO()
-    attendees_data = [json.loads(a.data) for a in attendees]
-    
-    generate_bulk_pdf(design.design_json, attendees_data, output)
-    output.seek(0)
-    
-    filename = f"badges_{_slugify(event.name)}.pdf"
-    return StreamingResponse(
-        output,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
-    )
+        output = io.BytesIO()
+        attendees_data = [json.loads(a.data) for a in attendees]
+        
+        generate_bulk_pdf(design.design_json, attendees_data, output)
+        output.seek(0)
+        
+        filename = f"badges_{_slugify(event.name)}.pdf"
+        return StreamingResponse(
+            output,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"PDF Endpoint Error: {traceback.format_exc()}")
+        raise HTTPException(500, detail=f"PDF Generation Failed: {str(e)}")
 
 
 @app.get("/api/orgs/{org_id}/attendees/{attendee_id}/pdf")
@@ -857,47 +865,59 @@ def get_attendee_pdf(
     session: Session = Depends(get_session),
     _: OrgMember = Depends(require_org_role("member")),
 ):
-    att = session.get(Attendee, attendee_id)
-    if not att or att.org_id != org_id:
-        raise HTTPException(404, "Attendee not found")
+    try:
+        att = session.get(Attendee, attendee_id)
+        if not att or att.org_id != org_id:
+            raise HTTPException(404, "Attendee not found")
 
-    # If design_id provided, use it, otherwise use event's design
-    target_design_id = design_id
-    if not target_design_id:
-        event = session.exec(
-            select(Event).where(Event.org_id == org_id, Event.eventbrite_id == att.event_id)
-        ).first()
-        if event:
-            target_design_id = event.design_id
+        # If design_id provided, use it, otherwise use event's design
+        target_design_id = design_id
+        if not target_design_id:
+            event = session.exec(
+                select(Event).where(Event.org_id == org_id, Event.event_id == att.event_id)
+            ).first()
+            if event:
+                target_design_id = event.design_id
 
-    if not target_design_id:
-        raise HTTPException(400, "No design linked to this attendee's event")
+        if not target_design_id:
+            raise HTTPException(400, "No design linked to this attendee's event")
 
-    design = session.get(BadgeDesign, target_design_id)
-    if not design:
-        raise HTTPException(404, "Design not found")
+        design = session.get(BadgeDesign, target_design_id)
+        if not design:
+            raise HTTPException(404, "Design not found")
 
-    output = io.BytesIO()
-    state = json.loads(design.design_json)
-    
-    # Create a single-badge PDF
-    badge_w = state.get('badgeW', 85)
-    badge_h = state.get('badgeH', 55)
-    
-    from reportlab.pdfgen import canvas
-    from reportlab.lib.pagesizes import mm
-    
-    c = canvas.Canvas(output, pagesize=(badge_w * mm, badge_h * mm))
-    render_badge_to_pdf(
-        c, json.loads(att.data), 0, 0, 
-        state.get('elements', []), 
-        badge_w, badge_h, state.get('badgeBg', '#ffffff')
-    )
-    c.save()
-    output.seek(0)
-    
-    return StreamingResponse(
-        output,
-        media_type="application/pdf",
-        headers={"Content-Disposition": "inline; filename=badge.pdf"}
-    )
+        output = io.BytesIO()
+        state = json.loads(design.design_json)
+        
+        # Create a single-badge PDF
+        badge_w = state.get('badgeW', 85)
+        badge_h = state.get('badgeH', 55)
+        
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.pagesizes import mm
+        
+        c = canvas.Canvas(output, pagesize=(badge_w * mm, badge_h * mm))
+        
+        # Determine elements
+        elements = state.get('elements', [])
+        if not elements and 'designs' in state:
+            elements = state['designs'].get('front', [])
+
+        render_badge_to_pdf(
+            c, json.loads(att.data), 0, 0, 
+            elements, 
+            badge_w, badge_h, state.get('badgeBg', '#ffffff')
+        )
+        c.save()
+        output.seek(0)
+        
+        return StreamingResponse(
+            output,
+            media_type="application/pdf",
+            headers={"Content-Disposition": "inline; filename=badge.pdf"}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Attendee PDF Endpoint Error: {traceback.format_exc()}")
+        raise HTTPException(500, detail=f"PDF Generation Failed: {str(e)}")
