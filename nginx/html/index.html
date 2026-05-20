@@ -414,9 +414,255 @@
   .eb-logo-icon svg { width: 12px; height: 12px; fill: white; }
   .btn.eb-btn { background: #f05537; color: #fff; border-color: #f05537; }
   .btn.eb-btn:hover { background: #d44020; }
+
+  /* ══════════════════════════════════════════════════════
+     AUTH OVERLAY
+  ══════════════════════════════════════════════════════ */
+  #auth-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  #auth-overlay.hidden { display: none; }
+  .auth-card {
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: var(--r-lg); box-shadow: var(--shadow-lg);
+    width: min(420px, 100%); padding: 36px 32px;
+    display: flex; flex-direction: column; gap: 20px;
+  }
+  .auth-logo { text-align: center; }
+  .auth-logo h1 { font-size: 26px; font-weight: 700; color: var(--accent); margin: 0 0 4px; }
+  .auth-logo p { font-size: 13px; color: var(--text3); margin: 0; }
+  .auth-tabs { display: flex; border-bottom: 1px solid var(--border); gap: 0; }
+  .auth-tab {
+    flex: 1; text-align: center; padding: 9px; font-size: 13px; font-weight: 500;
+    cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+    color: var(--text3); transition: all 0.15s;
+  }
+  .auth-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .auth-form { display: flex; flex-direction: column; gap: 12px; }
+  .auth-form.hidden { display: none; }
+  .auth-input-group { display: flex; flex-direction: column; gap: 4px; }
+  .auth-input-group label { font-size: 12px; color: var(--text2); font-weight: 500; }
+  .auth-input {
+    padding: 9px 11px; border: 1px solid var(--border2); border-radius: var(--r);
+    font-size: 13px; background: var(--surface2); color: var(--text);
+    outline: none; font-family: inherit; transition: border-color 0.15s; width: 100%;
+    box-sizing: border-box;
+  }
+  .auth-input:focus { border-color: var(--accent); }
+  .auth-btn {
+    padding: 10px; border-radius: var(--r); font-size: 13px; font-weight: 600;
+    cursor: pointer; border: none; transition: all 0.15s; font-family: inherit;
+  }
+  .auth-btn.primary { background: var(--accent); color: white; }
+  .auth-btn.primary:hover { background: var(--accent-dark, #d44020); }
+  .auth-btn.google {
+    background: var(--surface2); border: 1px solid var(--border2); color: var(--text);
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .auth-btn.google:hover { background: var(--border); }
+  .auth-divider { display: flex; align-items: center; gap: 10px; color: var(--text3); font-size: 11px; }
+  .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .auth-error { background: #fde8e8; color: var(--danger); border: 1px solid var(--danger); border-radius: var(--r); padding: 9px 12px; font-size: 12px; display: none; }
+  [data-theme="dark"] .auth-error { background: #3a1a1a; }
+  .auth-invite-banner {
+    background: var(--accent-light); border: 1px solid var(--accent);
+    border-radius: var(--r); padding: 10px 12px; font-size: 12px; color: var(--accent);
+    display: none; align-items: center; gap: 8px;
+  }
+  .auth-invite-banner.show { display: flex; }
+
+  /* ══════════════════════════════════════════════════════
+     ORG SETUP MODAL
+  ══════════════════════════════════════════════════════ */
+  #org-setup-overlay {
+    position: fixed; inset: 0; z-index: 900;
+    background: rgba(0,0,0,0.5); backdrop-filter: blur(3px);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  #org-setup-overlay.hidden { display: none; }
+  .org-setup-card {
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: var(--r-lg); box-shadow: var(--shadow-lg);
+    width: min(460px, 100%); padding: 32px;
+    display: flex; flex-direction: column; gap: 18px;
+  }
+  .org-setup-card h2 { margin: 0; font-size: 18px; }
+  .org-setup-card p { margin: 0; font-size: 13px; color: var(--text2); line-height: 1.5; }
+
+  /* ══════════════════════════════════════════════════════
+     TOP BAR USER MENU
+  ══════════════════════════════════════════════════════ */
+  .user-menu-wrap { position: relative; }
+  .user-avatar {
+    width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+    border: 2px solid var(--border2); object-fit: cover;
+    background: var(--accent); color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600; flex-shrink: 0;
+  }
+  .user-dropdown {
+    position: absolute; right: 0; top: 38px;
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: var(--r-lg); box-shadow: var(--shadow-lg);
+    min-width: 220px; z-index: 300; overflow: hidden;
+    display: none;
+  }
+  .user-dropdown.open { display: block; }
+  .user-dropdown-header { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+  .user-dropdown-header .uname { font-size: 13px; font-weight: 600; }
+  .user-dropdown-header .uemail { font-size: 11px; color: var(--text3); }
+  .user-dropdown-org { padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  .user-dropdown-org-label { font-size: 10px; color: var(--text3); padding: 4px 6px; letter-spacing: 0.5px; text-transform: uppercase; }
+  .org-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 7px 8px; border-radius: var(--r); cursor: pointer; font-size: 12px;
+    transition: background 0.1s;
+  }
+  .org-item:hover { background: var(--surface2); }
+  .org-item.active { color: var(--accent); font-weight: 500; }
+  .org-item-role { font-size: 10px; color: var(--text3); background: var(--surface2); padding: 1px 6px; border-radius: 10px; }
+  .user-dropdown-actions { padding: 6px 8px; }
+  .user-dropdown-action {
+    display: flex; align-items: center; gap: 8px; padding: 7px 8px;
+    border-radius: var(--r); cursor: pointer; font-size: 12px; color: var(--text);
+    transition: background 0.1s;
+  }
+  .user-dropdown-action:hover { background: var(--surface2); }
+  .user-dropdown-action.danger { color: var(--danger); }
+
+  /* ══════════════════════════════════════════════════════
+     ORG SETTINGS PANEL (inside existing panels)
+  ══════════════════════════════════════════════════════ */
+  .org-member-row {
+    display: flex; align-items: center; gap: 10px; padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .org-member-row:last-child { border-bottom: none; }
+  .org-member-avatar {
+    width: 28px; height: 28px; border-radius: 50%; background: var(--accent);
+    color: white; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; flex-shrink: 0;
+  }
+  .org-member-info { flex: 1; min-width: 0; }
+  .org-member-name { font-size: 12px; font-weight: 500; }
+  .org-member-email { font-size: 11px; color: var(--text3); }
+  .role-badge {
+    font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 500;
+    background: var(--surface2); color: var(--text2);
+  }
+  .role-badge.owner { background: #fff3e0; color: #e65100; }
+  .role-badge.admin { background: var(--accent-light); color: var(--accent); }
+  [data-theme="dark"] .role-badge.owner { background: #3a2a10; }
+
+  /* Online presence indicator */
+  .presence-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--success);
+    display: inline-block; margin-right: 4px;
+  }
+  #online-count {
+    font-size: 11px; color: var(--text3); display: flex; align-items: center; gap: 4px;
+    padding: 3px 8px; background: var(--surface2); border-radius: 20px; border: 1px solid var(--border);
+  }
+
+  /* Printed / checked-in badges in attendee list */
+  .att-status { display: flex; gap: 4px; flex-shrink: 0; }
+  .att-badge {
+    font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 500;
+  }
+  .att-badge.printed { background: #e8f5ee; color: var(--success); border: 1px solid var(--success); }
+  .att-badge.not-printed { background: var(--surface2); color: var(--text3); border: 1px solid var(--border); }
+  [data-theme="dark"] .att-badge.printed { background: #1a3a26; }
+
 </style>
 </head>
 <body>
+
+
+<!-- ══════════════════════════════════════════════════════
+     AUTH OVERLAY
+══════════════════════════════════════════════════════ -->
+<div id="auth-overlay">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <h1>BadgeCraft</h1>
+      <p>Event badge designer &amp; attendee management</p>
+    </div>
+
+    <div id="auth-invite-banner" class="auth-invite-banner">
+      <span>🎉</span>
+      <span id="auth-invite-text">You've been invited to join an organisation.</span>
+    </div>
+
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="tab-login" onclick="authSwitchTab('login')">Sign in</div>
+      <div class="auth-tab" id="tab-register" onclick="authSwitchTab('register')">Create account</div>
+    </div>
+
+    <!-- Login form -->
+    <div class="auth-form" id="form-login">
+      <div class="auth-input-group">
+        <label>Email</label>
+        <input class="auth-input" type="email" id="login-email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="auth-input-group">
+        <label>Password</label>
+        <input class="auth-input" type="password" id="login-password" placeholder="Your password" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter') authLogin()">
+      </div>
+      <div class="auth-error" id="login-error"></div>
+      <button class="auth-btn primary" onclick="authLogin()" id="login-btn">Sign in</button>
+      <div class="auth-divider">or</div>
+      <button class="auth-btn google" onclick="authGoogle()">
+        <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Continue with Google
+      </button>
+    </div>
+
+    <!-- Register form -->
+    <div class="auth-form hidden" id="form-register">
+      <div class="auth-input-group">
+        <label>Full name</label>
+        <input class="auth-input" type="text" id="reg-name" placeholder="Jane Smith" autocomplete="name">
+      </div>
+      <div class="auth-input-group">
+        <label>Email</label>
+        <input class="auth-input" type="email" id="reg-email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="auth-input-group">
+        <label>Password</label>
+        <input class="auth-input" type="password" id="reg-password" placeholder="At least 8 characters" autocomplete="new-password"
+          onkeydown="if(event.key==='Enter') authRegister()">
+      </div>
+      <div class="auth-error" id="reg-error"></div>
+      <button class="auth-btn primary" onclick="authRegister()" id="reg-btn">Create account</button>
+      <div class="auth-divider">or</div>
+      <button class="auth-btn google" onclick="authGoogle()">
+        <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Continue with Google
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     ORG SETUP MODAL (shown after first login with no org)
+══════════════════════════════════════════════════════ -->
+<div id="org-setup-overlay" class="hidden">
+  <div class="org-setup-card">
+    <h2>Welcome to BadgeCraft 👋</h2>
+    <p>Create your organisation to get started. You can invite teammates after setup.</p>
+    <div class="auth-input-group">
+      <label>Organisation name</label>
+      <input class="auth-input" id="org-name-input" type="text" placeholder="e.g. Acme Events"
+        onkeydown="if(event.key==='Enter') createOrg()">
+    </div>
+    <div class="auth-error" id="org-error"></div>
+    <button class="auth-btn primary" onclick="createOrg()">Create organisation</button>
+  </div>
+</div>
 
 <div class="header">
   <div class="logo">Badge<span>Craft</span></div>
@@ -435,7 +681,25 @@
       <button onclick="nextRecord()">→</button>
     </div>
     <button class="btn" onclick="toggleDarkMode()" title="Toggle Theme">🌓</button>
-
+    <div id="online-count" style="display:none"><span class="presence-dot"></span><span id="online-num">1</span> online</div>
+    <div class="user-menu-wrap" id="user-menu-wrap" style="display:none">
+      <div class="user-avatar" id="user-avatar-btn" onclick="toggleUserMenu()">?</div>
+      <div class="user-dropdown" id="user-dropdown">
+        <div class="user-dropdown-header">
+          <div class="uname" id="dd-user-name">—</div>
+          <div class="uemail" id="dd-user-email">—</div>
+        </div>
+        <div class="user-dropdown-org">
+          <div class="user-dropdown-org-label">Organisation</div>
+          <div id="dd-org-list"></div>
+          <div class="org-item" onclick="showCreateOrgModal()" style="color:var(--accent)">+ New organisation</div>
+        </div>
+        <div class="user-dropdown-actions">
+          <div class="user-dropdown-action" onclick="showOrgSettings()">⚙️ Org settings &amp; members</div>
+          <div class="user-dropdown-action danger" onclick="authLogout()">← Sign out</div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2040,6 +2304,539 @@ let wheelAccum = 0;
 canvasEl.addEventListener('wheel', e => { e.preventDefault(); wheelAccum += e.deltaY; const step = 100; if (Math.abs(wheelAccum) >= step) { changeZoom(wheelAccum > 0 ? -0.1 : 0.1); wheelAccum = 0; } }, { passive: false });
 window.addEventListener('resize', updatePage);
 init();
+
+
+// ════════════════════════════════════════════════════════════════════════════
+// BADGECRAFT AUTH + ORG SYSTEM
+// ════════════════════════════════════════════════════════════════════════════
+
+const API = '/api';
+let BC = {
+  token: null,
+  user: null,
+  orgs: [],
+  activeOrgId: null,
+  activeEventId: null,
+  ws: null,
+};
+
+// ── Bootstrap ────────────────────────────────────────────────────────────────
+
+async function bcInit() {
+  // Check for token in URL (Google OAuth callback or invite link)
+  const params = new URLSearchParams(window.location.search);
+  const urlToken = params.get('token');
+  const inviteCode = params.get('invite');
+  const urlError = params.get('error');
+
+  if (urlToken) {
+    localStorage.setItem('bc_token', urlToken);
+    window.history.replaceState({}, '', '/');
+  }
+  if (inviteCode) {
+    localStorage.setItem('bc_pending_invite', inviteCode);
+    window.history.replaceState({}, '', '/');
+  }
+  if (urlError) {
+    window.history.replaceState({}, '', '/');
+  }
+
+  BC.token = localStorage.getItem('bc_token');
+
+  // Show invite banner if there's a pending invite
+  const pendingInvite = localStorage.getItem('bc_pending_invite');
+  if (pendingInvite) {
+    await showInviteBanner(pendingInvite);
+  }
+
+  if (BC.token) {
+    try {
+      const me = await bcFetch('/auth/me');
+      BC.user = me;
+      BC.orgs = me.organisations || [];
+      // Restore active org
+      const savedOrg = localStorage.getItem('bc_active_org');
+      if (savedOrg && BC.orgs.find(o => o.id == savedOrg)) {
+        BC.activeOrgId = parseInt(savedOrg);
+      } else if (BC.orgs.length > 0) {
+        BC.activeOrgId = BC.orgs[0].id;
+      }
+      onAuthSuccess();
+    } catch (e) {
+      localStorage.removeItem('bc_token');
+      BC.token = null;
+      showAuthOverlay();
+    }
+  } else {
+    showAuthOverlay();
+  }
+}
+
+// ── API helper ────────────────────────────────────────────────────────────────
+
+async function bcFetch(path, options = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (BC.token) headers['Authorization'] = 'Bearer ' + BC.token;
+  const res = await fetch(API + path, {
+    ...options,
+    headers: { ...headers, ...(options.headers || {}) },
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Request failed');
+  }
+  return res.json();
+}
+
+// ── Auth overlay ──────────────────────────────────────────────────────────────
+
+function showAuthOverlay() {
+  document.getElementById('auth-overlay').classList.remove('hidden');
+}
+
+function hideAuthOverlay() {
+  document.getElementById('auth-overlay').classList.add('hidden');
+}
+
+function authSwitchTab(tab) {
+  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+  document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+  document.getElementById('form-login').classList.toggle('hidden', tab !== 'login');
+  document.getElementById('form-register').classList.toggle('hidden', tab !== 'register');
+}
+
+async function showInviteBanner(code) {
+  try {
+    const inv = await fetch(API + '/invites/' + code).then(r => r.json());
+    const banner = document.getElementById('auth-invite-banner');
+    document.getElementById('auth-invite-text').textContent =
+      `You've been invited to join "${inv.org_name}" as ${inv.role}.`;
+    banner.classList.add('show');
+  } catch (e) {
+    localStorage.removeItem('bc_pending_invite');
+  }
+}
+
+async function authLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  const btn = document.getElementById('login-btn');
+  errEl.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Signing in…';
+  try {
+    const res = await bcFetch('/auth/login', { method: 'POST', body: { email, password } });
+    BC.token = res.token;
+    BC.user = res.user;
+    localStorage.setItem('bc_token', BC.token);
+    const me = await bcFetch('/auth/me');
+    BC.orgs = me.organisations || [];
+    if (BC.orgs.length > 0) BC.activeOrgId = BC.orgs[0].id;
+    onAuthSuccess();
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Sign in';
+  }
+}
+
+async function authRegister() {
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const errEl = document.getElementById('reg-error');
+  const btn = document.getElementById('reg-btn');
+  errEl.style.display = 'none';
+  if (!name || !email || !password) { errEl.textContent = 'All fields required'; errEl.style.display = 'block'; return; }
+  btn.disabled = true;
+  btn.textContent = 'Creating account…';
+  try {
+    const res = await bcFetch('/auth/register', { method: 'POST', body: { name, email, password } });
+    BC.token = res.token;
+    BC.user = res.user;
+    BC.orgs = [];
+    localStorage.setItem('bc_token', BC.token);
+    onAuthSuccess();
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Create account';
+  }
+}
+
+async function authGoogle() {
+  const res = await bcFetch('/auth/google');
+  window.location.href = res.url;
+}
+
+function authLogout() {
+  BC.token = null; BC.user = null; BC.orgs = []; BC.activeOrgId = null;
+  localStorage.removeItem('bc_token');
+  localStorage.removeItem('bc_active_org');
+  if (BC.ws) { BC.ws.close(); BC.ws = null; }
+  toggleUserMenu(false);
+  showAuthOverlay();
+}
+
+// ── Post-auth flow ────────────────────────────────────────────────────────────
+
+async function onAuthSuccess() {
+  hideAuthOverlay();
+  updateUserMenu();
+
+  // Accept pending invite
+  const pendingInvite = localStorage.getItem('bc_pending_invite');
+  if (pendingInvite) {
+    localStorage.removeItem('bc_pending_invite');
+    try {
+      const res = await bcFetch('/invites/' + pendingInvite + '/accept', { method: 'POST' });
+      // Refresh orgs
+      const me = await bcFetch('/auth/me');
+      BC.orgs = me.organisations || [];
+      BC.activeOrgId = res.org_id;
+      localStorage.setItem('bc_active_org', BC.activeOrgId);
+      updateUserMenu();
+      alert(`Joined "${res.org_name}" as ${res.role}!`);
+    } catch (e) {
+      console.warn('Invite accept failed:', e.message);
+    }
+  }
+
+  if (BC.orgs.length === 0) {
+    // New user — show org creation
+    document.getElementById('org-setup-overlay').classList.remove('hidden');
+  } else {
+    bcActivateOrg(BC.activeOrgId || BC.orgs[0].id);
+  }
+}
+
+// ── Org management ────────────────────────────────────────────────────────────
+
+function updateUserMenu() {
+  if (!BC.user) return;
+  document.getElementById('user-menu-wrap').style.display = 'flex';
+  const avatarBtn = document.getElementById('user-avatar-btn');
+  if (BC.user.avatar) {
+    avatarBtn.innerHTML = `<img src="${BC.user.avatar}" style="width:30px;height:30px;border-radius:50%;object-fit:cover">`;
+  } else {
+    avatarBtn.textContent = (BC.user.name || '?')[0].toUpperCase();
+  }
+  document.getElementById('dd-user-name').textContent = BC.user.name;
+  document.getElementById('dd-user-email').textContent = BC.user.email;
+
+  const orgList = document.getElementById('dd-org-list');
+  orgList.innerHTML = BC.orgs.map(o => `
+    <div class="org-item ${o.id === BC.activeOrgId ? 'active' : ''}" onclick="bcActivateOrg(${o.id})">
+      <span>${o.name}</span>
+      <span class="org-item-role">${o.role}</span>
+    </div>
+  `).join('');
+}
+
+function toggleUserMenu(force) {
+  const dd = document.getElementById('user-dropdown');
+  const open = force !== undefined ? force : !dd.classList.contains('open');
+  dd.classList.toggle('open', open);
+}
+document.addEventListener('click', e => {
+  if (!document.getElementById('user-menu-wrap')?.contains(e.target)) toggleUserMenu(false);
+});
+
+async function bcActivateOrg(orgId) {
+  BC.activeOrgId = orgId;
+  localStorage.setItem('bc_active_org', orgId);
+  updateUserMenu();
+  toggleUserMenu(false);
+  // Update Eventbrite modal to use org token
+  const org = BC.orgs.find(o => o.id === orgId);
+  if (org) {
+    // Pre-fill eb token field if admin/owner
+    if (['admin','owner'].includes(org.role)) {
+      // fetch org details to check if token set
+      try {
+        const details = await bcFetch(`/orgs/${orgId}`);
+        if (details.has_eventbrite) {
+          document.getElementById('eb-token-input').value = '••••••••••••••••';
+          document.getElementById('eb-fetch-events-btn').disabled = false;
+        }
+      } catch(e) {}
+    }
+  }
+}
+
+async function createOrg() {
+  const name = document.getElementById('org-name-input').value.trim();
+  const errEl = document.getElementById('org-error');
+  if (!name) { errEl.textContent = 'Please enter an organisation name'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+  try {
+    const org = await bcFetch('/orgs', { method: 'POST', body: { name } });
+    BC.orgs.push(org);
+    BC.activeOrgId = org.id;
+    localStorage.setItem('bc_active_org', org.id);
+    document.getElementById('org-setup-overlay').classList.add('hidden');
+    updateUserMenu();
+    bcActivateOrg(org.id);
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+function showCreateOrgModal() {
+  toggleUserMenu(false);
+  document.getElementById('org-name-input').value = '';
+  document.getElementById('org-error').style.display = 'none';
+  document.getElementById('org-setup-overlay').classList.remove('hidden');
+}
+
+// ── Org settings panel ────────────────────────────────────────────────────────
+
+async function showOrgSettings() {
+  toggleUserMenu(false);
+  if (!BC.activeOrgId) return;
+  try {
+    const org = await bcFetch(`/orgs/${BC.activeOrgId}`);
+    const activeOrg = BC.orgs.find(o => o.id === BC.activeOrgId);
+    const role = activeOrg?.role || 'member';
+    const isAdmin = ['admin','owner'].includes(role);
+
+    const memberRows = org.members.map(m => {
+      const isSelf = m.user_id === BC.user?.id;
+      const canManage = isAdmin && !isSelf && m.role !== 'owner';
+      return `
+      <div class="org-member-row">
+        <div class="org-member-avatar">${(m.name||'?')[0].toUpperCase()}</div>
+        <div class="org-member-info">
+          <div class="org-member-name">${m.name}${isSelf ? ' (you)' : ''}</div>
+          <div class="org-member-email">${m.email}</div>
+        </div>
+        <span class="role-badge ${m.role}">${m.role}</span>
+        ${canManage ? `<button class="btn" style="font-size:11px;padding:3px 8px" onclick="removeMember(${m.user_id})">Remove</button>` : ''}
+      </div>`;
+    }).join('');
+
+    const inviteSection = isAdmin ? `
+      <div class="panel-section-title" style="margin-top:16px">Invite members</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input class="eb-input" id="invite-email" type="email" placeholder="Email (optional — leave blank for link only)">
+        <select id="invite-role" style="padding:8px;border:1px solid var(--border2);border-radius:var(--r);font-size:12px;background:var(--surface2);color:var(--text)">
+          <option value="member">Member</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button class="btn primary" onclick="sendInvite()" style="white-space:nowrap">Send invite</button>
+      </div>
+      <div id="invite-result" style="font-size:12px;color:var(--text2)"></div>
+    ` : '';
+
+    const tokenSection = isAdmin ? `
+      <div class="panel-section-title" style="margin-top:16px">Eventbrite API Token</div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:8px">This token is shared across your organisation. All members use it to import events.</p>
+      <div style="display:flex;gap:8px">
+        <input class="eb-input" id="org-eb-token" type="password" placeholder="${org.has_eventbrite ? 'Token saved — enter new to replace' : 'Paste Eventbrite private token'}">
+        <button class="btn primary" onclick="saveOrgToken()" style="white-space:nowrap">Save token</button>
+      </div>
+      <div id="token-save-result" style="font-size:12px;margin-top:6px"></div>
+    ` : '';
+
+    // Create a modal for org settings
+    let modal = document.getElementById('org-settings-modal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'org-settings-modal';
+      modal.className = 'eb-modal-overlay';
+      modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('open'); };
+      document.body.appendChild(modal);
+    }
+    modal.innerHTML = `
+      <div class="eb-modal" style="width:min(580px,96vw)">
+        <div class="eb-modal-header">
+          <h3>⚙️ ${org.name}</h3>
+          <button onclick="document.getElementById('org-settings-modal').classList.remove('open')"
+            style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:20px;padding:4px">✕</button>
+        </div>
+        <div class="eb-modal-body">
+          <div class="eb-step-label">Members (${org.members.length})</div>
+          ${memberRows}
+          ${inviteSection}
+          ${tokenSection}
+        </div>
+      </div>`;
+    modal.classList.add('open');
+    BC._orgSettingsData = { org_id: BC.activeOrgId };
+  } catch (e) {
+    alert('Failed to load org settings: ' + e.message);
+  }
+}
+
+async function sendInvite() {
+  const email = document.getElementById('invite-email')?.value.trim();
+  const role = document.getElementById('invite-role')?.value || 'member';
+  const resultEl = document.getElementById('invite-result');
+  try {
+    const res = await bcFetch(`/orgs/${BC.activeOrgId}/invites`, {
+      method: 'POST',
+      body: { email: email || null, role },
+    });
+    const link = res.link;
+    resultEl.innerHTML = email
+      ? `✅ Invite sent to ${email}. Link: <a href="${link}" style="color:var(--accent)">${link}</a>`
+      : `✅ Shareable link: <a href="${link}" style="color:var(--accent)">${link}</a> <button class="btn" style="font-size:11px;padding:2px 8px" onclick="navigator.clipboard.writeText('${link}')">Copy</button>`;
+  } catch (e) {
+    resultEl.textContent = '❌ ' + e.message;
+  }
+}
+
+async function removeMember(userId) {
+  if (!confirm('Remove this member?')) return;
+  try {
+    await bcFetch(`/orgs/${BC.activeOrgId}/members/${userId}`, { method: 'DELETE' });
+    showOrgSettings(); // refresh
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+async function saveOrgToken() {
+  const token = document.getElementById('org-eb-token')?.value.trim();
+  const resultEl = document.getElementById('token-save-result');
+  if (!token) return;
+  try {
+    await bcFetch(`/orgs/${BC.activeOrgId}`, {
+      method: 'PATCH',
+      body: { eventbrite_token: token },
+    });
+    resultEl.style.color = 'var(--success)';
+    resultEl.textContent = '✅ Token saved';
+    // Update org name in local state
+    const org = BC.orgs.find(o => o.id === BC.activeOrgId);
+    // Pre-fill eb modal token field
+    document.getElementById('eb-token-input').value = '••••••••••••••••';
+    document.getElementById('eb-fetch-events-btn').disabled = false;
+  } catch (e) {
+    resultEl.style.color = 'var(--danger)';
+    resultEl.textContent = '❌ ' + e.message;
+  }
+}
+
+// ── WebSocket presence ────────────────────────────────────────────────────────
+
+function bcConnectWS(orgId, eventId) {
+  if (BC.ws) { BC.ws.close(); BC.ws = null; }
+  if (!BC.token || !orgId || !eventId) return;
+
+  BC.activeEventId = eventId;
+  const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const ws = new WebSocket(`${wsProto}://${location.host}/ws/${orgId}/${eventId}?token=${BC.token}`);
+
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'presence') {
+      document.getElementById('online-count').style.display = 'flex';
+      document.getElementById('online-num').textContent = msg.users_online;
+    } else if (msg.type === 'printed') {
+      bcUpdateAttendeeStatus(msg.attendee_id, 'printed', msg.printed, msg.printed_by);
+    } else if (msg.type === 'checked_in') {
+      bcUpdateAttendeeStatus(msg.attendee_id, 'checked_in', msg.checked_in, msg.checked_in_by);
+    }
+  };
+  ws.onclose = () => {
+    document.getElementById('online-count').style.display = 'none';
+    // Reconnect after 3s
+    setTimeout(() => { if (BC.activeEventId === eventId) bcConnectWS(orgId, eventId); }, 3000);
+  };
+  BC.ws = ws;
+}
+
+function bcUpdateAttendeeStatus(attendeeId, field, value, byName) {
+  // Update the attendee row in the data table if visible
+  const row = document.querySelector(`[data-attendee-id="${attendeeId}"]`);
+  if (!row) return;
+  const badge = row.querySelector(`.att-badge-${field}`);
+  if (badge) {
+    badge.className = `att-badge att-badge-${field} ${value ? field : 'not-' + field}`;
+    badge.textContent = value ? (field === 'printed' ? '🖨 Printed' : '✓ Checked in') : 'Not ' + field.replace('_', ' ');
+  }
+  // Also update state.csvData if loaded
+  if (state.csvData && state.csvData.length) {
+    const att = state.csvData.find(r => r._attendee_id == attendeeId);
+    if (att) att[field] = value ? 'yes' : 'no';
+  }
+}
+
+// ── Override Eventbrite import to use org token via backend ──────────────────
+
+const _origEbFetch = window.ebApiFetch;
+window.ebApiFetch = async function(path) {
+  if (!BC.activeOrgId) throw new Error('No active organisation selected');
+  // Strip leading slash for building URL
+  const cleanPath = path.replace(/^\//, '');
+  const res = await fetch(`/api/orgs/${BC.activeOrgId}/eb/${cleanPath}`, {
+    headers: { 'Authorization': 'Bearer ' + BC.token }
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'HTTP ' + res.status);
+  }
+  return res.json();
+};
+
+// After Eventbrite import, sync to backend and connect WS
+const _origEbImport = window.ebImportAttendees;
+window.ebImportAttendees = async function() {
+  await _origEbImport.call(this);
+  // Sync attendees to backend
+  if (BC.activeOrgId && ebState.selectedEventId && state.csvData?.length) {
+    try {
+      await bcFetch(`/orgs/${BC.activeOrgId}/attendees/sync`, {
+        method: 'POST',
+        body: {
+          event_id: ebState.selectedEventId,
+          attendees: state.csvData.map((row, i) => ({ ...row, id: row.order_id || i })),
+        },
+      });
+      // Load back with backend IDs and connect WS
+      const attendees = await bcFetch(`/orgs/${BC.activeOrgId}/attendees?event_id=${ebState.selectedEventId}`);
+      bcMergeAttendeeStatus(attendees);
+      bcConnectWS(BC.activeOrgId, ebState.selectedEventId);
+    } catch (e) {
+      console.warn('Backend sync failed:', e.message);
+    }
+  }
+};
+
+function bcMergeAttendeeStatus(attendees) {
+  if (!state.csvData) return;
+  // Map by eventbrite_attendee_id
+  const map = {};
+  attendees.forEach(a => { map[a.eventbrite_attendee_id] = a; });
+  state.csvData = state.csvData.map(row => {
+    const match = map[row.order_id] || Object.values(map).find(a => {
+      const d = a.data || {};
+      return d.email === row.email;
+    });
+    if (match) {
+      return {
+        ...row,
+        _attendee_id: match.id,
+        printed: match.printed ? 'yes' : 'no',
+        checked_in: match.checked_in ? 'yes' : 'no',
+      };
+    }
+    return row;
+  });
+}
+
+// ── Kick off ──────────────────────────────────────────────────────────────────
+
+bcInit();
+
 
 
 // ─── EVENTBRITE INTEGRATION ─────────────────────────────────────────────────
