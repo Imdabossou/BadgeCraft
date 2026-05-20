@@ -807,6 +807,46 @@ def _slugify(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
 
 
+@app.delete("/api/orgs/{org_id}/events/{event_id}")
+def delete_event(
+    org_id: int,
+    event_id: str,
+    session: Session = Depends(get_session),
+    _: OrgMember = Depends(require_org_role("admin")),
+):
+    event = session.exec(
+        select(Event).where(Event.org_id == org_id, Event.eventbrite_id == event_id)
+    ).first()
+    if event:
+        session.delete(event)
+    
+    # Also delete attendees for this event
+    attendees = session.exec(
+        select(Attendee).where(Attendee.org_id == org_id, Attendee.event_id == event_id)
+    ).all()
+    for a in attendees:
+        session.delete(a)
+        
+    session.commit()
+    return {"status": "ok"}
+
+
+@app.delete("/api/orgs/{org_id}/events/{event_id}/attendees")
+def clear_attendees(
+    org_id: int,
+    event_id: str,
+    session: Session = Depends(get_session),
+    _: OrgMember = Depends(require_org_role("admin")),
+):
+    attendees = session.exec(
+        select(Attendee).where(Attendee.org_id == org_id, Attendee.event_id == event_id)
+    ).all()
+    for a in attendees:
+        session.delete(a)
+    session.commit()
+    return {"status": "ok"}
+
+
 # ════════════════════════════════════════════════════════════════════════════
 # PDF GENERATION
 # ════════════════════════════════════════════════════════════════════════════
@@ -874,13 +914,21 @@ def get_attendee_pdf(
         target_design_id = design_id
         if not target_design_id:
             event = session.exec(
-                select(Event).where(Event.org_id == org_id, Event.event_id == att.event_id)
+                select(Event).where(Event.org_id == org_id, Event.eventbrite_id == att.event_id)
             ).first()
             if event:
                 target_design_id = event.design_id
 
         if not target_design_id:
-            raise HTTPException(400, "No design linked to this attendee's event")
+            # Fallback: check if there's only one design in the org
+            fallback_design = session.exec(
+                select(BadgeDesign).where(BadgeDesign.org_id == org_id)
+            ).first()
+            if fallback_design:
+                target_design_id = fallback_design.id
+
+        if not target_design_id:
+            raise HTTPException(400, "No design linked to this attendee's event and no default design found")
 
         design = session.get(BadgeDesign, target_design_id)
         if not design:
