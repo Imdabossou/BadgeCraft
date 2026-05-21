@@ -937,26 +937,8 @@ def get_attendee_pdf(
         output = io.BytesIO()
         state = json.loads(design.design_json)
         
-        # Create a single-badge PDF
-        badge_w = state.get('badgeW', 85)
-        badge_h = state.get('badgeH', 55)
-        
-        from reportlab.pdfgen import canvas
-        from reportlab.lib.pagesizes import mm
-        
-        c = canvas.Canvas(output, pagesize=(badge_w * mm, badge_h * mm))
-        
-        # Determine elements
-        elements = state.get('elements', [])
-        if not elements and 'designs' in state:
-            elements = state['designs'].get('front', [])
-
-        render_badge_to_pdf(
-            c, json.loads(att.data), 0, 0, 
-            elements, 
-            badge_w, badge_h, state.get('badgeBg', '#ffffff')
-        )
-        c.save()
+        # Use full page layout even for a single attendee
+        generate_bulk_pdf(design.design_json, [json.loads(att.data)], output)
         output.seek(0)
         
         return StreamingResponse(

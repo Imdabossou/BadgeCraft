@@ -148,34 +148,62 @@ def generate_bulk_pdf(design_json, attendees, output):
         gap = state.get('gap', 0)
         badge_bg = state.get('badgeBg', '#ffffff')
         
-        # Elements might be in 'elements' or 'designs.front'
-        elements = state.get('elements', [])
-        if not elements and 'designs' in state:
-            elements = state['designs'].get('front', [])
+        duplex = state.get('duplex', False)
+        duplex_layout = state.get('duplexLayout', 'horizontal')
+        
+        designs = state.get('designs', {})
+        front_elements = designs.get('front', []) or state.get('elements', [])
+        back_elements = designs.get('back', [])
 
         c = canvas.Canvas(output, pagesize=(page_w * mm, page_h * mm))
 
         # Calculate grid
-        cols = state.get('cols', int((page_w - 2 * margin_left + gap) // (badge_w + gap)))
-        rows = state.get('rows', int((page_h - 2 * margin_top + gap) // (badge_h + gap)))
+        cols = int(state.get('cols', 1))
+        rows = int(state.get('rows', 1))
         
-        if cols <= 0: cols = 1
-        if rows <= 0: rows = 1
-
-        badges_per_page = cols * rows
+        bpp = cols * rows # badges per page
         
-        for i, att in enumerate(attendees):
-            if i > 0 and i % badges_per_page == 0:
-                c.showPage()
+        if not duplex:
+            # Single sided
+            for i, att in enumerate(attendees):
+                if i > 0 and i % bpp == 0:
+                    c.showPage()
 
-            idx_on_page = i % badges_per_page
-            row = idx_on_page // cols
-            col = idx_on_page % cols
+                idx_on_page = i % bpp
+                row = idx_on_page // cols
+                col = idx_on_page % cols
 
-            b_x = margin_left + col * (badge_w + gap)
-            b_y = page_h - margin_top - (row + 1) * badge_h - row * gap
+                b_x = margin_left + col * (badge_w + gap)
+                b_y = page_h - margin_top - (row + 1) * badge_h - row * gap
 
-            render_badge_to_pdf(c, att, b_x, b_y, elements, badge_w, badge_h, badge_bg)
+                render_badge_to_pdf(c, att, b_x, b_y, front_elements, badge_w, badge_h, badge_bg)
+        else:
+            # Duplex - logic matches frontend getSlotInfo
+            # Each attendee takes 2 slots (Front, Back)
+            total_slots = len(attendees) * 2
+            for i in range(total_slots):
+                if i > 0 and i % bpp == 0:
+                    c.showPage()
+                
+                page_idx = i // bpp
+                local_idx = i % bpp
+                
+                # Determine record and side
+                record_idx = page_idx * (bpp // 2) + (local_idx // 2)
+                if record_idx >= len(attendees):
+                    continue
+                    
+                is_back = (local_idx % 2 == 1)
+                att = attendees[record_idx]
+                elements = back_elements if is_back else front_elements
+                
+                row = local_idx // cols
+                col = local_idx % cols
+                
+                b_x = margin_left + col * (badge_w + gap)
+                b_y = page_h - margin_top - (row + 1) * badge_h - row * gap
+                
+                render_badge_to_pdf(c, att, b_x, b_y, elements, badge_w, badge_h, badge_bg)
 
         c.save()
     except Exception:
