@@ -640,19 +640,107 @@ def list_events(
     _: OrgMember = Depends(require_org_role("member")),
 ):
     events = session.exec(
-        select(Event).where(Event.org_id == org_id)
+        select(Event).where(Event.org_id == org_id).order_by(Event.synced_at.desc())
     ).all()
-    return [
-        {
+    result = []
+    for e in events:
+        total = session.exec(
+            select(Attendee).where(Attendee.org_id == org_id, Attendee.event_id == e.eventbrite_id)
+        ).all()
+        printed = sum(1 for a in total if a.printed)
+        result.append({
             "id": e.id,
             "event_id": e.eventbrite_id,
             "name": e.name,
             "status": e.status,
+            "source": e.source if hasattr(e, 'source') else ("manual" if e.status == "custom" else "eventbrite"),
             "design_id": e.design_id,
             "start_date": e.start_date,
             "capacity": e.capacity,
-        } for e in events
-    ]
+            "attendee_count": len(total),
+            "printed_count": printed,
+        })
+    return result
+
+
+class CreateManualEventRequest(BaseModel):
+    name: str
+    start_date: Optional[str] = None
+    location: Optional[str] = None
+    description: Optional[str] = None
+
+
+@app.post("/api/orgs/{org_id}/events/manual")
+def create_manual_event(
+    org_id: int,
+    req: CreateManualEventRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+    _: OrgMember = Depends(require_org_role("admin")),
+):
+    event_id = f"manual-{secrets.token_hex(8)}"
+    event = Event(
+        org_id=org_id,
+        eventbrite_id=event_id,
+        name=req.name,
+        start_date=req.start_date,
+        status="custom",
+    )
+    session.add(event)
+    session.commit()
+    session.refresh(event)
+    return {
+        "id": event.id,
+        "event_id": event.eventbrite_id,
+        "name": event.name,
+        "status": event.status,
+        "source": "manual",
+        "design_id": None,
+        "attendee_count": 0,
+        "printed_count": 0,
+    }
+
+
+@app.post("/api/orgs/{org_id}/events/{event_id}/mark-all-printed")
+async def mark_all_printed(
+    org_id: int,
+    event_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+    _: OrgMember = Depends(require_org_role("member")),
+):
+    attendees = session.exec(
+        select(Attendee).where(Attendee.org_id == org_id, Attendee.event_id == event_id)
+    ).all()
+    for a in attendees:
+        a.printed = True
+        a.printed_at = datetime.utcnow()
+        a.printed_by = current_user.id
+        session.add(a)
+    session.commit()
+    await manager.broadcast(org_id, event_id, {"type": "bulk_update", "field": "printed", "value": True})
+    return {"updated": len(attendees)}
+
+
+@app.post("/api/orgs/{org_id}/events/{event_id}/reset-printed")
+async def reset_printed(
+    org_id: int,
+    event_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+    _: OrgMember = Depends(require_org_role("member")),
+):
+    attendees = session.exec(
+        select(Attendee).where(Attendee.org_id == org_id, Attendee.event_id == event_id)
+    ).all()
+    for a in attendees:
+        a.printed = False
+        a.printed_at = None
+        a.printed_by = None
+        session.add(a)
+    session.commit()
+    await manager.broadcast(org_id, event_id, {"type": "bulk_update", "field": "printed", "value": False})
+    return {"updated": len(attendees)}
 
 
 class CreateEventRequest(BaseModel):
