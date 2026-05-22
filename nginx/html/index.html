@@ -1056,7 +1056,6 @@
         </div>
         <div class="user-dropdown-actions">
           <div class="user-dropdown-action" onclick="showOrgSettings()">⚙️ Org settings &amp; members</div>
-          <div class="user-dropdown-action" onclick="toggleUserMenu(false); openConfigModal()">📦 Backup &amp; Export</div>
           <div class="user-dropdown-action danger" onclick="authLogout()">← Sign out</div>
         </div>
       </div>
@@ -1419,7 +1418,16 @@
                 <span class="num" id="stat-pending" style="color:var(--accent)">0</span> pending
               </div>
             </div>
-            <div style="margin-left:auto; display:flex; gap:6px">
+            <div style="margin-left:auto; display:flex; gap:6px; flex-wrap:wrap">
+              <button class="btn" onclick="document.getElementById('att-csv-file').click()" style="font-size:12px; padding:5px 10px; gap:5px; display:inline-flex; align-items:center">
+                <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+                Import CSV
+              </button>
+              <input type="file" id="att-csv-file" accept=".csv" style="display:none" onchange="attImportCSV(event)">
+              <button class="btn" onclick="openAddAttendeeModal()" style="font-size:12px; padding:5px 10px; gap:5px; display:inline-flex; align-items:center">
+                <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><line x1="10" y1="3" x2="10" y2="17"/><line x1="3" y1="10" x2="17" y2="10"/></svg>
+                Add Attendee
+              </button>
               <button class="btn" onclick="receptionMarkAllPrinted()" style="font-size:12px; padding:5px 10px">Mark All Printed</button>
             </div>
           </div>
@@ -1454,6 +1462,7 @@
         </div>
 
         <!-- EXPORT panel -->
+        <!-- EXPORT PANEL - flat sections style -->
         <div class="event-panel" id="event-panel-print" style="flex-direction:row">
           <div class="print-panel" id="event-print-panel-left">
             <div class="panel-section">
@@ -1488,30 +1497,81 @@
               </div>
             </div>
           </div>
-          <div class="export-main">
-            <div class="export-card">
-              <div class="export-card-title">
-                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="12" height="10" rx="1"/><path d="M4 8H2a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h2v3h12v-3h2a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1h-2"/><rect x="4" y="14" width="12" height="4" rx="0.5"/></svg>
-                Export Summary
-              </div>
-              <p>Review your settings then start the export.</p>
-              <div style="display:flex; flex-direction:column; gap:8px; font-size:13px; margin-bottom:16px">
-                <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border)"><span style="color:var(--text3)">Mode</span><b id="ps-mode">Combined PDF</b></div>
-                <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border)"><span style="color:var(--text3)">Badges per page</span><b id="ps-bpp">–</b></div>
-                <div style="display:flex; justify-content:space-between; padding:8px 0"><span style="color:var(--text3)">Page size</span><b id="ps-page">–</b></div>
-              </div>
-              <button class="btn primary" id="export-btn" onclick="startPrintExport()" style="width:100%; justify-content:center; padding:11px; font-size:14px; font-weight:600">
-                Start Export
-              </button>
-              <div id="batch-progress-wrap" class="batch-progress-wrap" style="display:none; margin-top:12px">
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px">
-                  <div style="flex:1; background:var(--border); height:6px; border-radius:3px; overflow:hidden">
-                    <div id="batch-progress-fill" style="width:0%; height:100%; background:var(--accent); transition:width 0.2s"></div>
-                  </div>
-                  <span id="batch-progress-label" style="font-size:12px; color:var(--text2); font-family:'DM Mono',monospace; white-space:nowrap">0 / 0</span>
+          <!-- Export right area - flat panel sections -->
+          <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; background:var(--surface2)">
+            <!-- Summary + export action -->
+            <div class="panel-section" style="background:var(--surface)">
+              <div class="panel-section-title">Export Summary</div>
+              <div style="border:1px solid var(--border); border-radius:var(--r); overflow:hidden; margin-bottom:12px">
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--surface2); border-bottom:1px solid var(--border)">
+                  <span style="font-size:12px; color:var(--text3)">Mode</span>
+                  <b id="ps-mode" style="font-size:12px">Combined PDF</b>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-bottom:1px solid var(--border)">
+                  <span style="font-size:12px; color:var(--text3)">Badges per page</span>
+                  <b id="ps-bpp" style="font-size:12px; font-family:'DM Mono',monospace">–</b>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--surface2); border-bottom:1px solid var(--border)">
+                  <span style="font-size:12px; color:var(--text3)">Page size</span>
+                  <b id="ps-page" style="font-size:12px; font-family:'DM Mono',monospace">–</b>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px;" id="ps-files-row">
+                  <span style="font-size:12px; color:var(--text3)">Output</span>
+                  <b id="ps-files" style="font-size:12px; font-family:'DM Mono',monospace">–</b>
                 </div>
               </div>
-              <p id="export-status-msg" style="text-align:center; font-size:12px; color:var(--text3); margin-top:8px"></p>
+              <button class="btn primary" id="export-btn" onclick="startPrintExport()" style="width:100%; justify-content:center; padding:10px; font-size:13px; font-weight:600">
+                Start Export
+              </button>
+              <div id="batch-progress-wrap" style="display:none; margin-top:10px">
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px">
+                  <div style="flex:1; background:var(--border); height:5px; border-radius:3px; overflow:hidden">
+                    <div id="batch-progress-fill" style="width:0%; height:100%; background:var(--accent); transition:width 0.2s"></div>
+                  </div>
+                  <span id="batch-progress-label" style="font-size:11px; color:var(--text2); font-family:'DM Mono',monospace; white-space:nowrap">0 / 0</span>
+                </div>
+              </div>
+              <p id="export-status-msg" style="text-align:center; font-size:11px; color:var(--text3); margin-top:6px"></p>
+            </div>
+            <!-- Backup & project files -->
+            <div class="panel-section" style="background:var(--surface); border-top:1px solid var(--border)">
+              <div class="panel-section-title">Backup &amp; Project Files</div>
+              <p style="font-size:12px; color:var(--text3); margin-bottom:12px; line-height:1.5">Export or import your badge design and layout configurations.</p>
+              <div style="display:flex; flex-direction:column; gap:6px">
+                <div style="display:flex; align-items:center; justify-content:space-between; padding:9px 12px; border:1px solid var(--border); border-radius:var(--r); background:var(--surface2)">
+                  <div>
+                    <div style="font-size:12px; font-weight:600; color:var(--text); margin-bottom:1px">Badge Design</div>
+                    <div style="font-size:11px; color:var(--text3)">Elements, fonts, colors, dimensions</div>
+                  </div>
+                  <div style="display:flex; gap:5px">
+                    <button class="btn" onclick="exportDesign()" style="font-size:11px; padding:4px 9px">Export</button>
+                    <button class="btn" onclick="document.getElementById('import-design-file').click()" style="font-size:11px; padding:4px 9px">Import</button>
+                  </div>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between; padding:9px 12px; border:1px solid var(--border); border-radius:var(--r); background:var(--surface2)">
+                  <div>
+                    <div style="font-size:12px; font-weight:600; color:var(--text); margin-bottom:1px">Page Layout</div>
+                    <div style="font-size:11px; color:var(--text3)">Page size, grid, margins, gaps</div>
+                  </div>
+                  <div style="display:flex; gap:5px">
+                    <button class="btn" onclick="exportLayout()" style="font-size:11px; padding:4px 9px">Export</button>
+                    <button class="btn" onclick="document.getElementById('import-layout-file').click()" style="font-size:11px; padding:4px 9px">Import</button>
+                  </div>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between; padding:9px 12px; border:1px solid color-mix(in srgb, var(--accent) 40%, transparent); border-radius:var(--r); background:var(--accent-light)">
+                  <div>
+                    <div style="font-size:12px; font-weight:600; color:var(--accent); margin-bottom:1px">Full Project Backup</div>
+                    <div style="font-size:11px; color:var(--accent); opacity:0.75">All settings, designs &amp; layout</div>
+                  </div>
+                  <div style="display:flex; gap:5px">
+                    <button class="btn primary" onclick="exportFull()" style="font-size:11px; padding:4px 9px">Export</button>
+                    <button class="btn" onclick="document.getElementById('import-full-file').click()" style="font-size:11px; padding:4px 9px">Import</button>
+                  </div>
+                </div>
+              </div>
+              <input type="file" id="import-design-file" accept=".json" style="display:none" onchange="importDesign(event,'design')">
+              <input type="file" id="import-layout-file" accept=".json" style="display:none" onchange="importDesign(event,'layout')">
+              <input type="file" id="import-full-file" accept=".json" style="display:none" onchange="importDesign(event,'full')">
             </div>
           </div>
         </div>
@@ -3680,6 +3740,333 @@ function bcMergeAttendeeStatus(attendees) {
 
 // ── Kick off ──────────────────────────────────────────────────────────────────
 
+
+// ════════════════════════════════════════════════════════════════════════════
+// ATTENDEE MANAGEMENT — CSV import, manual add/edit
+// ════════════════════════════════════════════════════════════════════════════
+
+let attLocalHeaders = [];   // field names for this event
+let attEditingId = null;    // null = adding new, int = editing existing
+let attCSVPending = null;   // { headers, rows } waiting for confirm
+
+// ── Derive headers from loaded attendees ─────────────────────────────────────
+function attSyncHeaders() {
+  if (receptionAttendees.length > 0) {
+    const sample = receptionAttendees[0].data;
+    if (sample && typeof sample === 'object') {
+      attLocalHeaders = Object.keys(sample);
+    }
+  }
+}
+
+// ── CSV Import ────────────────────────────────────────────────────────────────
+function attImportCSV(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = ''; // reset so same file can be re-selected
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const text = ev.target.result;
+    const lines = text.replace(/^\uFEFF/, '').trim().split('\n');
+    const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
+    const rows = lines.slice(1).map(line => {
+      const cells = line.split(',').map(c => c.replace(/^"|"$/g, '').trim());
+      const obj = {};
+      headers.forEach((h, i) => { obj[h] = cells[i] || ''; });
+      return obj;
+    }).filter(r => Object.values(r).some(v => v));
+
+    attCSVPending = { headers, rows };
+
+    // Show preview
+    const status = document.getElementById('csv-preview-status');
+    status.className = 'eb-status info';
+    status.style.display = 'flex';
+    status.innerHTML = `<span><strong>${rows.length}</strong> records found with <strong>${headers.length}</strong> fields: ${headers.map(h => `<code style="background:var(--surface2);padding:1px 4px;border-radius:3px;font-size:10px">${h}</code>`).join(' ')}</span>`;
+
+    const tableWrap = document.getElementById('csv-preview-table-wrap');
+    let th = '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr>';
+    headers.forEach(h => th += `<th style="padding:6px 10px;background:var(--surface2);border-bottom:1px solid var(--border);text-align:left;font-weight:600;color:var(--text2);white-space:nowrap">${h}</th>`);
+    th += '</tr></thead><tbody>';
+    rows.slice(0, 5).forEach(r => {
+      th += '<tr>';
+      headers.forEach(h => th += `<td style="padding:6px 10px;border-bottom:1px solid var(--border);color:var(--text2)">${r[h] || ''}</td>`);
+      th += '</tr>';
+    });
+    if (rows.length > 5) th += `<tr><td colspan="${headers.length}" style="padding:8px 10px;color:var(--text3);font-style:italic;font-size:11px">… and ${rows.length - 5} more rows</td></tr>`;
+    tableWrap.innerHTML = th + '</tbody></table>';
+
+    document.getElementById('att-csv-preview-overlay').classList.add('open');
+  };
+  reader.readAsText(file);
+}
+
+function closeAttCSVPreview() {
+  document.getElementById('att-csv-preview-overlay').classList.remove('open');
+  attCSVPending = null;
+}
+
+async function confirmAttCSVImport() {
+  if (!attCSVPending || !BC.activeEventId) return;
+  const { headers, rows } = attCSVPending;
+  const replace = document.getElementById('csv-replace-existing').checked;
+
+  const btn = document.getElementById('csv-import-confirm-btn');
+  btn.disabled = true;
+  btn.textContent = 'Importing…';
+
+  try {
+    if (replace) {
+      // Clear existing first
+      await bcFetch(`/orgs/${BC.activeOrgId}/events/${BC.activeEventId}/attendees`, { method: 'DELETE' });
+    }
+    // Sync to backend
+    await bcFetch(`/orgs/${BC.activeOrgId}/attendees/sync`, {
+      method: 'POST',
+      body: {
+        event_id: BC.activeEventId,
+        attendees: rows.map((r, i) => ({ ...r, id: r.id || (Date.now() + i) }))
+      }
+    });
+
+    attLocalHeaders = headers;
+    closeAttCSVPreview();
+    await receptionLoadAttendees();
+    await receptionLoadEvents();
+    showAlert('Import Complete', `${rows.length} attendees imported successfully.`);
+  } catch (e) {
+    showAlert('Import Failed', e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Import Attendees';
+  }
+}
+
+// ── Manual Add / Edit Attendee ─────────────────────────────────────────────
+
+function openAddAttendeeModal(editId) {
+  attEditingId = editId || null;
+  attSyncHeaders();
+
+  const title = document.getElementById('add-att-modal-title');
+  title.textContent = attEditingId ? 'Edit Attendee' : 'Add Attendee';
+
+  const noHeaders = document.getElementById('add-att-no-headers');
+  const form = document.getElementById('add-att-form');
+
+  if (!attLocalHeaders.length) {
+    noHeaders.style.display = 'block';
+    form.style.display = 'none';
+    renderHeaderChips();
+  } else {
+    noHeaders.style.display = 'none';
+    form.style.display = 'flex';
+    renderAttForm(editId);
+  }
+
+  document.getElementById('add-attendee-overlay').classList.add('open');
+}
+
+function closeAddAttendeeModal() {
+  document.getElementById('add-attendee-overlay').classList.remove('open');
+  attEditingId = null;
+}
+
+function renderAttForm(editId) {
+  const form = document.getElementById('add-att-form');
+  let existingData = {};
+  if (editId) {
+    const att = receptionAttendees.find(a => a.id === editId);
+    if (att) existingData = att.data || {};
+  }
+  form.innerHTML = attLocalHeaders.map(h => `
+    <div class="field-group">
+      <label>${h.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</label>
+      <input type="text" id="att-field-${h}" value="${(existingData[h] || '').replace(/"/g, '&quot;')}" placeholder="${h}">
+    </div>
+  `).join('');
+}
+
+function addAttendeeHeader() {
+  const inp = document.getElementById('new-header-input');
+  const val = inp.value.trim().replace(/\s+/g, '_').toLowerCase();
+  if (!val || attLocalHeaders.includes(val)) return;
+  attLocalHeaders.push(val);
+  inp.value = '';
+  renderHeaderChips();
+  // If we now have headers, show the form too
+  if (attLocalHeaders.length > 0) {
+    document.getElementById('add-att-no-headers').style.display = 'block';
+    document.getElementById('add-att-form').style.display = 'flex';
+    renderAttForm(null);
+  }
+}
+
+function renderHeaderChips() {
+  const chips = document.getElementById('header-chips');
+  chips.innerHTML = attLocalHeaders.map((h, i) => `
+    <span style="display:inline-flex;align-items:center;gap:4px;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);border-radius:20px;padding:2px 8px;font-size:11px;font-family:'DM Mono',monospace">
+      ${h}
+      <span style="cursor:pointer;opacity:0.7;font-size:13px" onclick="removeNewHeader(${i})">✕</span>
+    </span>
+  `).join('');
+}
+
+function removeNewHeader(i) {
+  attLocalHeaders.splice(i, 1);
+  renderHeaderChips();
+}
+
+async function confirmAddAttendee() {
+  if (!BC.activeEventId) return;
+
+  // If no headers defined yet but user added some via new-header UI, build form first
+  if (!attLocalHeaders.length) {
+    showAlert('No Fields', 'Please add at least one field before saving an attendee.');
+    return;
+  }
+
+  const data = {};
+  attLocalHeaders.forEach(h => {
+    const inp = document.getElementById(`att-field-${h}`);
+    data[h] = inp ? inp.value.trim() : '';
+  });
+
+  const btn = document.getElementById('add-att-confirm-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  try {
+    if (attEditingId) {
+      // Update via sync (send full record with existing eb_id)
+      const existing = receptionAttendees.find(a => a.id === attEditingId);
+      const mergedData = { ...(existing?.data || {}), ...data };
+      await bcFetch(`/orgs/${BC.activeOrgId}/attendees/sync`, {
+        method: 'POST',
+        body: {
+          event_id: BC.activeEventId,
+          attendees: [{ ...mergedData, id: existing?.eventbrite_attendee_id || attEditingId }]
+        }
+      });
+    } else {
+      // Add new
+      await bcFetch(`/orgs/${BC.activeOrgId}/attendees/sync`, {
+        method: 'POST',
+        body: {
+          event_id: BC.activeEventId,
+          attendees: [{ ...data, id: 'manual-' + Date.now() }]
+        }
+      });
+    }
+    closeAddAttendeeModal();
+    await receptionLoadAttendees();
+    await receptionLoadEvents();
+  } catch (e) {
+    showAlert('Error', 'Failed to save: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save Attendee';
+  }
+}
+
+// ── Manage fields modal ───────────────────────────────────────────────────────
+
+function manageAttendeeHeaders() {
+  closeAddAttendeeModal();
+  attSyncHeaders();
+  renderMFList();
+  document.getElementById('manage-fields-overlay').classList.add('open');
+}
+
+function closeManageFieldsModal() {
+  document.getElementById('manage-fields-overlay').classList.remove('open');
+}
+
+function renderMFList() {
+  const list = document.getElementById('mf-header-list');
+  if (!attLocalHeaders.length) {
+    list.innerHTML = '<div style="padding:12px;color:var(--text3);font-size:12px;text-align:center">No fields defined. Add one above.</div>';
+    return;
+  }
+  list.innerHTML = attLocalHeaders.map((h, i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface2)">
+      <span style="flex:1;font-size:12px;font-family:'DM Mono',monospace;color:var(--text)">${h}</span>
+      <button class="btn" style="font-size:11px;padding:3px 8px;color:var(--danger);border-color:var(--danger)" onclick="mfRemoveHeader(${i})">Remove</button>
+    </div>
+  `).join('');
+}
+
+function mfAddHeader() {
+  const inp = document.getElementById('mf-new-input');
+  const val = inp.value.trim().replace(/\s+/g, '_').toLowerCase();
+  if (!val || attLocalHeaders.includes(val)) return;
+  attLocalHeaders.push(val);
+  inp.value = '';
+  renderMFList();
+}
+
+function mfRemoveHeader(i) {
+  const removed = attLocalHeaders[i];
+  showConfirm('Remove Field', `Remove field "${removed}"? This will clear this data from all attendees on re-save.`, () => {
+    attLocalHeaders.splice(i, 1);
+    renderMFList();
+  });
+}
+
+// ── Override receptionRenderTable to add Edit button + sync attLocalHeaders ──
+const _origRenderTable2 = window._origReceptionRenderTable || window.receptionRenderTable;
+window.receptionRenderTable = function() {
+  // Sync headers from loaded data
+  attSyncHeaders();
+
+  // Update stats
+  const total = receptionAttendees.length;
+  const printed = receptionAttendees.filter(a => a.printed).length;
+  const pending = total - printed;
+  ['stat-total','stat-printed','stat-pending'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = [total, printed, pending][i];
+  });
+
+  const wrap = document.getElementById('reception-table-wrap');
+  if (!receptionFiltered.length) {
+    wrap.innerHTML = '<div class="prop-empty">No attendees found. Import a CSV or add attendees manually.</div>';
+    return;
+  }
+
+  const sampleData = receptionFiltered[0].data;
+  const allKeys = Object.keys(sampleData || {});
+  // Show first 4 columns
+  const headers = allKeys.slice(0, 4);
+
+  let h = '<table class="reception-table"><thead><tr>';
+  headers.forEach(head => h += `<th>${head.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</th>`);
+  h += '<th>Status</th><th>Actions</th></tr></thead><tbody>';
+
+  receptionFiltered.forEach(a => {
+    const isPrinted = a.printed;
+    h += `<tr id="att-row-${a.id}">`;
+    headers.forEach(head => h += `<td class="${head==='name'||head==='first_name'?'td-name':''}">${a.data[head] || ''}</td>`);
+    h += `
+      <td>
+        <span class="badge-status ${isPrinted ? 'printed' : ''}">${isPrinted ? 'Printed' : 'Pending'}</span>
+      </td>
+      <td>
+        <div class="td-actions">
+          <button class="reception-action-btn" onclick="openAddAttendeeModal(${a.id})" title="Edit">✏️</button>
+          <button class="reception-action-btn" onclick="receptionViewBadge(${a.id})" title="View badge">🔖</button>
+          <button class="reception-action-btn ${isPrinted ? 'active' : ''}" onclick="receptionMarkPrinted(${a.id}, ${!isPrinted})" title="${isPrinted ? 'Reset' : 'Mark printed'}">
+            ${isPrinted ? '✓' : '🖨'}
+          </button>
+        </div>
+      </td>
+    </tr>`;
+  });
+  wrap.innerHTML = h + '</tbody></table>';
+};
+
+
+
 bcInit();
 
 
@@ -4428,6 +4815,79 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
   </div>
 </div>
+
+<!-- ADD ATTENDEE / EDIT MODAL -->
+<div class="eb-modal-overlay" id="add-attendee-overlay" onclick="if(event.target===this) closeAddAttendeeModal()">
+  <div class="eb-modal" style="max-width:540px">
+    <div class="eb-modal-header">
+      <h3 id="add-att-modal-title">Add Attendee</h3>
+      <button onclick="closeAddAttendeeModal()" style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:20px;line-height:1;padding:4px">&#x2715;</button>
+    </div>
+    <div class="eb-modal-body" style="gap:12px">
+      <div id="add-att-no-headers" style="display:none">
+        <div class="eb-status info" style="display:flex">
+          <span>No attendee fields defined yet. Add fields to get started, or import a CSV.</span>
+        </div>
+        <div style="margin-top:12px; display:flex; gap:8px; align-items:center">
+          <input type="text" id="new-header-input" class="eb-input" placeholder="Field name (e.g. first_name)" onkeydown="if(event.key==='Enter') addAttendeeHeader()">
+          <button class="btn primary" onclick="addAttendeeHeader()" style="white-space:nowrap">Add Field</button>
+        </div>
+        <div id="header-chips" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:8px"></div>
+      </div>
+      <div id="add-att-form" style="display:none; flex-direction:column; gap:8px"></div>
+    </div>
+    <div class="eb-modal-footer">
+      <button class="btn" onclick="closeAddAttendeeModal()">Cancel</button>
+      <button class="btn" onclick="manageAttendeeHeaders()" style="margin-right:auto">Manage Fields</button>
+      <button class="btn primary" id="add-att-confirm-btn" onclick="confirmAddAttendee()">Save Attendee</button>
+    </div>
+  </div>
+</div>
+
+<!-- MANAGE FIELDS MODAL -->
+<div class="eb-modal-overlay" id="manage-fields-overlay" onclick="if(event.target===this) closeManageFieldsModal()">
+  <div class="eb-modal" style="max-width:420px">
+    <div class="eb-modal-header">
+      <h3>Manage Attendee Fields</h3>
+      <button onclick="closeManageFieldsModal()" style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:20px;line-height:1;padding:4px">&#x2715;</button>
+    </div>
+    <div class="eb-modal-body" style="gap:10px">
+      <p style="font-size:12px; color:var(--text2); line-height:1.5">Add or remove fields for attendees. Removing a field will clear that data from all attendees.</p>
+      <div style="display:flex; gap:8px; align-items:center">
+        <input type="text" id="mf-new-input" class="eb-input" placeholder="New field name" onkeydown="if(event.key==='Enter') mfAddHeader()">
+        <button class="btn primary" onclick="mfAddHeader()" style="white-space:nowrap">Add</button>
+      </div>
+      <div id="mf-header-list" style="display:flex; flex-direction:column; gap:4px; max-height:240px; overflow-y:auto"></div>
+    </div>
+    <div class="eb-modal-footer">
+      <button class="btn" onclick="closeManageFieldsModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- CSV IMPORT PREVIEW MODAL -->
+<div class="eb-modal-overlay" id="att-csv-preview-overlay" onclick="if(event.target===this) closeAttCSVPreview()">
+  <div class="eb-modal" style="max-width:620px">
+    <div class="eb-modal-header">
+      <h3>CSV Import Preview</h3>
+      <button onclick="closeAttCSVPreview()" style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:20px;line-height:1;padding:4px">&#x2715;</button>
+    </div>
+    <div class="eb-modal-body" style="gap:10px">
+      <div id="csv-preview-status" class="eb-status info" style="display:flex"></div>
+      <div id="csv-preview-table-wrap" style="max-height:240px; overflow:auto; border:1px solid var(--border); border-radius:var(--r)"></div>
+      <div style="display:flex; align-items:center; gap:8px; padding:8px 0; border-top:1px solid var(--border)">
+        <input type="checkbox" id="csv-replace-existing" style="cursor:pointer; accent-color:var(--accent)" checked>
+        <label for="csv-replace-existing" style="font-size:12px; color:var(--text2); cursor:pointer">Replace existing attendees</label>
+        <span style="font-size:11px; color:var(--text3)">(uncheck to append)</span>
+      </div>
+    </div>
+    <div class="eb-modal-footer">
+      <button class="btn" onclick="closeAttCSVPreview()">Cancel</button>
+      <button class="btn primary" id="csv-import-confirm-btn" onclick="confirmAttCSVImport()">Import Attendees</button>
+    </div>
+  </div>
+</div>
+
 
 </body>
 </html>
