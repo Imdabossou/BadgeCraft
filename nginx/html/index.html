@@ -1367,7 +1367,7 @@
       </div>
 
       <!-- Event selected: sub-nav + panels -->
-      <div id="reception-event-workspace" style="display:none; flex:1; flex-direction:column; overflow:hidden; display:none">
+      <div id="reception-event-workspace" style="display:none; flex:1; flex-direction:column; overflow:hidden;">
 
         <!-- Sub-navigation -->
         <div class="event-subnav" id="event-subnav">
@@ -3427,15 +3427,16 @@ function receptionSyncEvent() {
 
 async function receptionDeleteEvent() {
   if (!BC.activeEventId) return;
-  showConfirm('Delete Event', `Are you sure you want to delete the event "${document.getElementById('reception-event-name').textContent}"? This will also remove all synced attendee data.`, async () => {
+  const eventName = localStorage.getItem('bc_active_event_name') || 'this event';
+  showConfirm('Delete Event', `Are you sure you want to delete the event "${eventName}"? This will also remove all synced attendee data.`, async () => {
     try {
       await bcFetch(`/orgs/${BC.activeOrgId}/events/${BC.activeEventId}`, { method: 'DELETE' });
       BC.activeEventId = null;
       localStorage.removeItem('bc_active_event');
       localStorage.removeItem('bc_active_event_name');
-      document.getElementById('reception-event-details').style.display = 'none';
-      document.getElementById('reception-event-name').textContent = 'Event Management';
-      document.getElementById('reception-table-wrap').innerHTML = '<div class="prop-empty">Select an event to view attendees</div>';
+      // Hide workspace, show empty state
+      document.getElementById('reception-event-workspace').style.display = 'none';
+      document.getElementById('reception-empty').style.display = '';
       receptionLoadEvents();
     } catch (e) {
       showAlert('Error', 'Failed to delete event: ' + e.message);
@@ -4196,7 +4197,7 @@ async function receptionLoadEvents() {
       const printed = e.printed_count || 0;
       const total = e.attendee_count || 0;
       return `
-        <div class="event-card ${isActive ? 'active' : ''}" onclick="receptionSelectEvent('${e.event_id}', ${JSON.stringify(e.name)}, '${e.design_id || ''}')">
+        <div class="event-card ${isActive ? 'active' : ''}" data-event-id="${e.event_id}" onclick="receptionSelectEvent('${e.event_id}', ${JSON.stringify(e.name)}, '${e.design_id || ''}')">
           <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:6px; margin-bottom:4px">
             <div class="event-card-name">${e.name}</div>
             <span class="event-card-badge ${typeClass}">${typeLabel}</span>
@@ -4244,7 +4245,7 @@ window.receptionSelectEvent = async function(eventId, eventName, designId) {
 
   // Highlight sidebar
   document.querySelectorAll('.event-card').forEach(el => {
-    el.classList.toggle('active', el.querySelector('.event-card-name')?.textContent === eventName);
+    el.classList.toggle('active', el.dataset.eventId === eventId);
   });
 
   // Update header context  
