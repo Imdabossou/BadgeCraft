@@ -4196,8 +4196,9 @@ async function receptionLoadEvents() {
       const typeLabel = e.source === 'manual' ? 'Manual' : (e.status || 'Event');
       const printed = e.printed_count || 0;
       const total = e.attendee_count || 0;
+      const escapedName = e.name.replace(/'/g, "\\'");
       return `
-        <div class="event-card ${isActive ? 'active' : ''}" data-event-id="${e.event_id}" onclick="receptionSelectEvent('${e.event_id}', ${JSON.stringify(e.name)}, '${e.design_id || ''}')">
+        <div class="event-card ${isActive ? 'active' : ''}" data-event-id="${e.event_id}" onclick="receptionSelectEvent('${e.event_id}', '${escapedName}', '${e.design_id || ''}')">
           <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:6px; margin-bottom:4px">
             <div class="event-card-name">${e.name}</div>
             <span class="event-card-badge ${typeClass}">${typeLabel}</span>
@@ -4295,16 +4296,14 @@ async function createManualEvent() {
   btn.textContent = 'Creating…';
   errEl.style.display = 'none';
   try {
-    await bcFetch(`/orgs/${BC.activeOrgId}/events/manual`, {
+    const newEvent = await bcFetch(`/orgs/${BC.activeOrgId}/events/manual`, {
       method: 'POST',
       body: { name, start_date: date || null, location: location || null, description: desc || null }
     });
     closeCreateEventModal();
     await receptionLoadEvents();
-    // Auto-select the new event
-    const events = await bcFetch(`/orgs/${BC.activeOrgId}/events`);
-    const newest = events[events.length - 1];
-    if (newest) receptionSelectEvent(newest.event_id, newest.name, '');
+    // Auto-select the new event using returned ID
+    if (newEvent) receptionSelectEvent(newEvent.event_id, newEvent.name, '');
   } catch(e) {
     errEl.textContent = e.message;
     errEl.style.display = 'block';
