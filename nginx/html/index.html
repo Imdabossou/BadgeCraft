@@ -4114,6 +4114,19 @@ function switchSubtab(name) {
   const btn = document.getElementById('subnav-btn-' + name);
   if (btn) btn.classList.add('active');
 
+  // Sync attendee fields and data to state whenever we enter Design, Preview or Print tabs
+  if (['design', 'preview', 'print'].includes(name)) {
+    if (BC.activeEventId && attLocalHeaders.length) {
+      state.csvHeaders = [...attLocalHeaders];
+      state.csvData = receptionAttendees.map(a => ({
+        ...a.data,
+        _attendee_id: a.id,
+        printed: a.printed ? 'yes' : 'no'
+      }));
+      updateStatus();
+    }
+  }
+
   // Lazy-mount design/layout panels into event workspace
   if (name === 'design') {
     const wrap = document.getElementById('design-panel-inner');
@@ -4125,7 +4138,7 @@ function switchSubtab(name) {
         Array.from(designTab.children).forEach(child => wrap.appendChild(child));
       }
     }
-    updatePage(); redraw();
+    updatePage(); redraw(); renderProps();
   }
   if (name === 'layout') {
     const wrap = document.getElementById('layout-panel-inner');
