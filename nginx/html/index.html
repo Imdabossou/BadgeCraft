@@ -3371,6 +3371,8 @@ async function receptionDeleteEvent() {
     try {
       await bcFetch(`/orgs/${BC.activeOrgId}/events/${BC.activeEventId}`, { method: 'DELETE' });
       BC.activeEventId = null;
+      localStorage.removeItem('bc_active_event');
+      localStorage.removeItem('bc_active_event_name');
       document.getElementById('reception-event-details').style.display = 'none';
       document.getElementById('reception-event-name').textContent = 'Event Management';
       document.getElementById('reception-table-wrap').innerHTML = '<div class="prop-empty">Select an event to view attendees</div>';
@@ -3823,12 +3825,27 @@ async function receptionLoadEvents() {
   } catch(e) {
     list.innerHTML = `<div style="padding:12px; color:var(--danger); font-size:12px">Error: ${e.message}</div>`;
   }
+
+  // Restore previously active event after the list renders
+  const savedEventId = localStorage.getItem('bc_active_event');
+  const savedEventName = localStorage.getItem('bc_active_event_name');
+  if (savedEventId && savedEventName && !BC.activeEventId) {
+    try {
+      const events = await bcFetch(`/orgs/${BC.activeOrgId}/events`);
+      const match = events.find(e => e.event_id === savedEventId);
+      if (match) {
+        receptionSelectEvent(match.event_id, match.name, match.design_id || '');
+      }
+    } catch(e) {}
+  }
 }
 
 // Override receptionSelectEvent to use new workspace
 const _origReceptionSelectEvent = window.receptionSelectEvent;
 window.receptionSelectEvent = async function(eventId, eventName, designId) {
   BC.activeEventId = eventId;
+  localStorage.setItem('bc_active_event', eventId);
+  localStorage.setItem('bc_active_event_name', eventName);
 
   // Show workspace, hide empty state
   document.getElementById('reception-empty').style.display = 'none';
