@@ -521,10 +521,20 @@ function updateStatus() {
   const sel = state.elements.find(e => e.id === state.selectedId); document.getElementById('sb-sel').style.display = sel ? '' : 'none'; if(sel) document.getElementById('sb-sel-name').textContent = sel.name;
 }
 
-function renderPreview() {
-  const grid = document.getElementById('preview-grid'); grid.innerHTML = '';
-  const bpp = state.cols * state.rows;
+let previewRun = 0;
+async function renderPreview() {
+  const run = ++previewRun;
+  const grid = document.getElementById('preview-grid');
   const records = state.csvData.length ? state.csvData : [null];
+  // QR codes and images load asynchronously; wait for them so every badge draws complete
+  const allElements = state.duplex ? [...(state.designs.front || []), ...(state.designs.back || [])] : state.elements;
+  if (allElements.some(el => el.type === 'qr' || el.type === 'image')) {
+    document.getElementById('preview-info').textContent = 'Preparing preview…';
+    await Promise.all([preloadImages(allElements), preloadQRImages(records.filter(Boolean), allElements)]);
+    if (run !== previewRun) return; // a newer preview started while we waited
+  }
+  grid.innerHTML = '';
+  const bpp = state.cols * state.rows;
   let recordsPerPage = state.duplex ? (state.duplexLayout === 'horizontal' ? Math.floor(bpp / 2) : state.cols * Math.floor(state.rows / 2)) : bpp;
   const pages = Math.ceil(records.length / (recordsPerPage || 1));
   const scale = 0.6, pW = state.pageW*PX_PER_MM*scale, pH = state.pageH*PX_PER_MM*scale;
