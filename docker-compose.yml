@@ -7,6 +7,7 @@ services:
       - DATABASE_URL=sqlite:////data/badgecraft.db
       - SECRET_KEY=${SECRET_KEY}
       - BASE_URL=${BASE_URL:-https://badgecraft.example.com}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
       - GOOGLE_REDIRECT_URI=${BASE_URL:-https://badgecraft.example.com}/api/auth/google/callback

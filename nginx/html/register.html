@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Event registration</title>
+<link rel="icon" href="/favicon.ico">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f0eee9; --surface: #fff; --border: #e0ddd6; --border2: #c8c5bc;
+    --text: #181714; --text2: #635f58; --text3: #98958f;
+    --accent: #2a5c8a; --accent-light: #dce9f5; --danger: #c23434; --success: #2d7a4a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not(.kiosk) {
+      --bg: #0f0f0f; --surface: #1c1c1c; --border: #303030; --border2: #424242;
+      --text: #e2e2e2; --text2: #a8a8a8; --text3: #777; --accent: #4a9eff; --accent-light: #172535;
+      --danger: #ff6b6b; --success: #3d9e60;
+    }
+  }
+  body { font-family: 'DM Sans', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 520px; box-shadow: 0 8px 32px rgba(0,0,0,.08); overflow: hidden; }
+  .card-head { padding: 28px 28px 20px; border-bottom: 1px solid var(--border); }
+  .org { font-size: 12px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+  h1 { font-size: 24px; line-height: 1.25; letter-spacing: -.3px; }
+  .meta { color: var(--text2); font-size: 14px; margin-top: 8px; display: flex; gap: 14px; flex-wrap: wrap; }
+  .desc { color: var(--text2); font-size: 14px; line-height: 1.55; margin-top: 12px; white-space: pre-line; }
+  form { padding: 24px 28px 28px; display: flex; flex-direction: column; gap: 14px; }
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  label { display: block; font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 5px; }
+  label .req { color: var(--danger); }
+  input, select { width: 100%; padding: 11px 12px; font: inherit; font-size: 15px; border: 1px solid var(--border2); border-radius: 8px; background: var(--surface); color: var(--text); outline: none; }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+  .hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+  button { padding: 13px; font: inherit; font-size: 15px; font-weight: 600; border: none; border-radius: 8px; background: var(--accent); color: #fff; cursor: pointer; margin-top: 6px; }
+  button:disabled { opacity: .6; cursor: wait; }
+  .error { color: var(--danger); font-size: 14px; display: none; }
+  .done { padding: 48px 28px; text-align: center; display: none; }
+  .done .tick { width: 64px; height: 64px; border-radius: 50%; background: var(--success); color: #fff; font-size: 34px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+  .done h2 { font-size: 22px; margin-bottom: 8px; }
+  .done p { color: var(--text2); font-size: 15px; line-height: 1.5; }
+  .closed { padding: 48px 28px; text-align: center; color: var(--text2); }
+  .foot { text-align: center; color: var(--text3); font-size: 11px; padding: 0 0 18px; }
+
+  /* Kiosk: big touch targets for a tablet at reception */
+  .kiosk body { padding: 32px; align-items: center; }
+  .kiosk .card { max-width: 720px; }
+  .kiosk h1 { font-size: 34px; }
+  .kiosk .card-head { padding: 36px 40px 24px; }
+  .kiosk form { padding: 28px 40px 40px; gap: 18px; }
+  .kiosk label { font-size: 16px; }
+  .kiosk input, .kiosk select { font-size: 20px; padding: 16px; border-radius: 12px; }
+  .kiosk button { font-size: 20px; padding: 18px; border-radius: 12px; }
+  .kiosk .done h2 { font-size: 30px; }
+  .kiosk .done p { font-size: 19px; }
+  .kiosk .welcome { font-size: 18px; color: var(--text2); margin-top: 10px; }
+  @media (max-width: 520px) { .row-2 { grid-template-columns: 1fr; } body { padding: 16px 10px; } .card-head, form { padding-left: 20px; padding-right: 20px; } }
+</style>
+</head>
+<body>
+  <div class="card" id="card">
+    <div class="closed" id="loading">Loading…</div>
+  </div>
+<script src="/js/register.js"></script>
+</body>
+</html>
