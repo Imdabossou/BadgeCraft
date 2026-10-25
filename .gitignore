@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+
+# Local config (copy from .env.example)
+.env
