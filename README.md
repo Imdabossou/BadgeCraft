@@ -2,8 +2,6 @@
 
 Event badge designer and reception check-in system. Run an event on its own or bring attendees in from Eventbrite, then check people in and print their welcome badges at the front desk. Several desks can work on the same event at once.
 
-For a simple offline badge maker, see [BadgeCraft-Lite](https://github.com/Imdabossou/BadgeCraft-Lite).
-
 ## Features
 
 - **Reception check-in desk**: search by name, company or email, or scan a ticket barcode. Enter checks the guest in and prints their badge. Every desk updates live.
