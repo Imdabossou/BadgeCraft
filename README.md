@@ -2,6 +2,22 @@
 
 Event badge designer and reception check-in system. Run an event on its own or bring attendees in from Eventbrite, then check people in and print their welcome badges at the front desk. Several desks can work on the same event at once.
 
+<picture>
+  <source media="(prefers-color-scheme: light)" srcset="docs/screenshots/check-in-light.png">
+  <img alt="Reception check-in desk: search box, walk-in button, live checked-in count and a list of attendees with Check in &amp; print buttons" src="docs/screenshots/check-in-dark.png">
+</picture>
+
+## Screenshots
+
+| | |
+| --- | --- |
+| ![Badge designer with a live preview of an attendee's badge](docs/screenshots/badge-designer.png) | ![Attendee list with check-in and printed status](docs/screenshots/attendees.png) |
+| **Badge designer**: placeholders, shapes, images and vCard QR codes, previewed with real attendee data | **Attendees**: everyone on the list with source, check-in and print status |
+| ![Print preview showing a sheet of badges](docs/screenshots/print-preview.png) | ![Public online registration form](docs/screenshots/registration.png) |
+| **Preview**: badges laid out on the page, ready to print or export | **Online registration**: the shareable sign-up page, also used as a reception kiosk |
+
+All names and companies in the screenshots are made up.
+
 ## Features
 
 - **Reception check-in desk**: search by name, company or email, or scan a ticket barcode. Enter checks the guest in and prints their badge. Every desk updates live.
