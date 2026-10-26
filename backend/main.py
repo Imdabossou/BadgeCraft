@@ -7,6 +7,7 @@ import secrets
 import time
 import traceback
 from collections import defaultdict, deque
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from typing import Any, Optional
 
@@ -34,7 +35,13 @@ from pdf_utils import generate_bulk_pdf
 BASE_URL = os.getenv("BASE_URL", "https://badgecraft.example.com")
 EXTRA_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()]
 
-app = FastAPI(title="BadgeCraft API", version="1.0.0", docs_url="/api/docs")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    create_db()
+    yield
+
+
+app = FastAPI(title="BadgeCraft API", version="1.0.0", docs_url="/api/docs", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -43,11 +50,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.on_event("startup")
-def on_startup():
-    create_db()
 
 
 # ════════════════════════════════════════════════════════════════════════════

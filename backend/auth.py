@@ -6,7 +6,7 @@ from typing import Optional
 import httpx
 from fastapi import Depends, HTTPException, status, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import JWTError, jwt
+import jwt
 import bcrypt
 from sqlmodel import Session, select
 
@@ -54,7 +54,7 @@ def create_access_token(user_id: int, org_id: Optional[int] = None) -> str:
 def decode_token(token: str) -> dict:
     try:
         return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    except JWTError:
+    except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 
