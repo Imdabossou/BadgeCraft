@@ -1,0 +1,51 @@
+# Checks every push to main and development, and every pull request.
+name: CI
+
+on:
+  push:
+    branches: [main, development]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: pip install -r requirements.txt
+      - name: Lint (syntax errors and pyflakes)
+        run: pipx run ruff check --select E9,F .
+      - name: Starts and serves the API schema
+        env:
+          DATABASE_URL: sqlite:///${{ runner.temp }}/ci.db
+        run: |
+          uvicorn main:app --port 8000 &
+          for i in $(seq 30); do curl -fsS -o /dev/null http://localhost:8000/openapi.json && break; sleep 1; done
+          curl -fsS -o /dev/null -w "%{http_code} /openapi.json\n" http://localhost:8000/openapi.json
+      - name: Docker image builds
+        run: docker build -t badgecraft-backend-ci .
+
+  nginx:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: nginx config is valid
+        run: >
+          docker run --rm --add-host backend:127.0.0.1
+          -v "$PWD/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro"
+          nginx:alpine nginx -t
