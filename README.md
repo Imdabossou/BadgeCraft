@@ -1,6 +1,4 @@
-# BadgeCraft
-
-<img src="docs/icon.png" width="128" alt="BadgeCraft icon">
+# <img src="docs/icon.png" width="36" align="top" alt=""> BadgeCraft
 
 Event badge designer and reception check-in system. Run an event on its own or bring attendees in from Eventbrite, then check people in and print their welcome badges at the front desk. Several desks can work on the same event at once.
 
