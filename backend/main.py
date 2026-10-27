@@ -34,7 +34,7 @@ from pdf_utils import generate_bulk_pdf
 BASE_URL = os.getenv("BASE_URL", "https://badgecraft.example.com")
 EXTRA_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()]
 
-app = FastAPI(title="BadgeCraft API", docs_url="/api/docs")
+app = FastAPI(title="BadgeCraft API", version="1.0.0", docs_url="/api/docs")
 
 app.add_middleware(
     CORSMiddleware,
