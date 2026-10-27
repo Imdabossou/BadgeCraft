@@ -2,7 +2,6 @@ import json
 import io
 import qrcode
 import traceback
-from PIL import Image
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import mm
 from reportlab.lib.colors import HexColor, Color
@@ -149,7 +148,6 @@ def generate_bulk_pdf(design_json, attendees, output):
         badge_bg = state.get('badgeBg', '#ffffff')
         
         duplex = state.get('duplex', False)
-        duplex_layout = state.get('duplexLayout', 'horizontal')
         
         designs = state.get('designs', {})
         front_elements = designs.get('front', []) or state.get('elements', [])

@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 import httpx
-from fastapi import Depends, HTTPException, status, Query
+from fastapi import Depends, HTTPException, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import jwt
 import bcrypt

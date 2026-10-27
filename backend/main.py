@@ -106,8 +106,8 @@ def google_login():
 async def google_callback(code: str, state: str = "", session: Session = Depends(get_session)):
     try:
         guser = await google_exchange_code(code)
-    except Exception as e:
-        return RedirectResponse(f"/?error=google_failed")
+    except Exception:
+        return RedirectResponse("/?error=google_failed")
 
     google_id = guser.get("sub")
     email = guser.get("email", "")
