@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+  // Runs before the page draws, so the wrong theme never flashes.
+  (function () {
+    var choice = 'system';
+    try { choice = localStorage.getItem('badgecraft-theme') || 'system'; } catch (e) {}
+    var dark = choice === 'dark' || (choice === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  })();
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BadgeCraft</title>
@@ -11,7 +20,7 @@
 <script src="/js/vendor/jszip.min.js"></script>
 <script src="/js/vendor/qrcode.min.js"></script>
 </head>
-<body data-theme="dark">
+<body>
 
 <!-- ══════════════════════════════════════════════════════
      AUTH OVERLAY
@@ -101,10 +110,10 @@
   <div class="logo">
     <div class="logo-icon">
       <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="3" y="2" width="14" height="16" rx="2" fill="white" fill-opacity="0.9"/>
-        <rect x="6" y="6" width="8" height="1.5" rx="0.75" fill="#2a5c8a"/>
-        <rect x="6" y="9" width="6" height="1.5" rx="0.75" fill="#2a5c8a"/>
-        <rect x="6" y="12" width="4" height="1.5" rx="0.75" fill="#c85a1a"/>
+        <rect x="3" y="2" width="14" height="16" rx="2" style="fill:var(--on-accent)"/>
+        <rect x="6" y="6" width="8" height="1.5" rx="0.75" style="fill:var(--accent)"/>
+        <rect x="6" y="9" width="6" height="1.5" rx="0.75" style="fill:var(--accent)"/>
+        <rect x="6" y="12" width="4" height="1.5" rx="0.75" style="fill:var(--accent)"/>
       </svg>
     </div>
     Badge<span>Craft</span>
@@ -115,7 +124,7 @@
     <div id="online-count" class="presence-indicator" style="display:none" title="People with this event open">
       <span class="presence-dot"></span><span id="online-num">1</span> online
     </div>
-    <button class="icon-btn" onclick="toggleDarkMode()" title="Toggle theme">
+    <button class="icon-btn" id="theme-toggle" onclick="toggleDarkMode()" title="Theme: system">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 13A7 7 0 0 1 7 3a7 7 0 1 0 10 10z"/></svg>
     </button>
     <div class="user-menu-wrap" id="user-menu-wrap" style="display:none">

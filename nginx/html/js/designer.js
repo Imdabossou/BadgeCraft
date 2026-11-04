@@ -4,7 +4,7 @@ let state = {
   marginTop: 10, marginRight: 10, marginBottom: 10, marginLeft: 10, gap: 5,
   badgeW: 86, badgeH: 54, badgeBg: '#ffffff',
   sizeMode: 'auto', elements: [], selectedId: null, currentRecord: 0,
-  csvData: [], csvHeaders: [], snap: false, zoom: 1, darkMode: true,
+  csvData: [], csvHeaders: [], snap: false, zoom: 1,
   duplex: false, duplexLayout: 'horizontal', currentSide: 'front', designs: { front: [], back: [] }
 };
 
@@ -571,8 +571,24 @@ function applyPreset() {
 
 function changeZoom(d) { state.zoom = Math.max(0.1, Math.min(5, state.zoom + d)); updatePage(); }
 function resetZoom() { state.zoom = 1; updatePage(); }
-function toggleDarkMode() { state.darkMode = !state.darkMode; applyTheme(); saveToLocal(); }
-function applyTheme() { document.body.setAttribute('data-theme', state.darkMode ? 'dark' : 'light'); }
+const THEME_KEY = 'badgecraft-theme';
+const THEME_ORDER = ['system', 'light', 'dark'];
+function themeChoice() {
+  try { return localStorage.getItem(THEME_KEY) || 'system'; } catch { return 'system'; }
+}
+function toggleDarkMode() {
+  const next = THEME_ORDER[(THEME_ORDER.indexOf(themeChoice()) + 1) % THEME_ORDER.length];
+  try { localStorage.setItem(THEME_KEY, next); } catch { /* still applies for this visit */ }
+  applyTheme(next);
+}
+function applyTheme(choice = themeChoice()) {
+  const dark = choice === 'dark' || (choice === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  document.body.removeAttribute('data-theme');
+  const button = document.getElementById('theme-toggle');
+  if (button) button.title = `Theme: ${choice}`;
+}
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => applyTheme());
 function reorder(dir) { const idx = state.elements.findIndex(e=>e.id===state.selectedId); if(idx<0) return; const el = state.elements.splice(idx,1)[0]; if(dir==='top') state.elements.push(el); else state.elements.unshift(el); redraw(); renderLayers(); saveToLocal(); }
 function alignElement(dir) { const el = state.elements.find(e=>e.id===state.selectedId); if(!el) return; if(dir==='h-center') el.x = (badgeWpx-el.w)/2; else if(dir==='left') el.x=0; else if(dir==='right') el.x=badgeWpx-el.w; redraw(); renderProps(); saveToLocal(); }
 

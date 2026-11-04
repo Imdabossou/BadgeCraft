@@ -8,21 +8,20 @@
 <link rel="icon" href="/favicon.ico" sizes="32x32">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #f0eee9; --surface: #fff; --border: #e0ddd6; --border2: #c8c5bc;
-    --text: #181714; --text2: #635f58; --text3: #98958f;
-    --accent: #2a5c8a; --accent-light: #dce9f5; --danger: #c23434; --success: #2d7a4a;
+    --bg: #f2f2f2; --surface: #fff; --border: #dedede; --border2: #c6c6c6;
+    --text: #181818; --text2: #606060; --text3: #969696;
+    --accent: #1c1c1c; --accent-light: #e6e6e6; --danger: #c23434; --success: #2d7a4a;
   }
   @media (prefers-color-scheme: dark) {
     :root:not(.kiosk) {
       --bg: #0f0f0f; --surface: #1c1c1c; --border: #303030; --border2: #424242;
-      --text: #e2e2e2; --text2: #a8a8a8; --text3: #777; --accent: #4a9eff; --accent-light: #172535;
+      --text: #e2e2e2; --text2: #a8a8a8; --text3: #777; --accent: #e6e6e6; --accent-light: #2c2c2c;
       --danger: #ff6b6b; --success: #3d9e60;
     }
   }
-  body { font-family: 'DM Sans', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; }
+  body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; }
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 520px; box-shadow: 0 8px 32px rgba(0,0,0,.08); overflow: hidden; }
   .card-head { padding: 28px 28px 20px; border-bottom: 1px solid var(--border); }
   .org { font-size: 12px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
@@ -36,7 +35,7 @@
   input, select { width: 100%; padding: 11px 12px; font: inherit; font-size: 15px; border: 1px solid var(--border2); border-radius: 8px; background: var(--surface); color: var(--text); outline: none; }
   input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
   .hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
-  button { padding: 13px; font: inherit; font-size: 15px; font-weight: 600; border: none; border-radius: 8px; background: var(--accent); color: #fff; cursor: pointer; margin-top: 6px; }
+  button { padding: 13px; font: inherit; font-size: 15px; font-weight: 600; border: none; border-radius: 8px; background: var(--accent); color: var(--surface); cursor: pointer; margin-top: 6px; }
   button:disabled { opacity: .6; cursor: wait; }
   .error { color: var(--danger); font-size: 14px; display: none; }
   .done { padding: 48px 28px; text-align: center; display: none; }
