@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="BadgeCraft API", version="1.0.0", docs_url="/api/docs", lifespan=lifespan)
+app = FastAPI(title="BadgeCraft API", version="1.1.0", docs_url="/api/docs", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
