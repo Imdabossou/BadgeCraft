@@ -67,3 +67,5 @@ The app is served on port 80: nginx serves `nginx/html` and proxies `/api` and `
 BadgeCraft is free software under the [GNU Affero General Public License v3.0 or later](LICENSE) (AGPL-3.0-or-later).
 You can use, change and share it, including commercially. If you share a changed version, or run one as a service
 that other people use over a network, you must make its source code available under the same licence.
+
+The DM Sans and DM Mono fonts for badge text are included under the [SIL Open Font License](nginx/html/css/fonts/OFL-dm-sans.txt).

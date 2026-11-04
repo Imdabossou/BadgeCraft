@@ -1114,7 +1114,7 @@ window.addEventListener('resize', () => {
   }
 });
 
-function init() { loadFromLocal(); state.selectedId = null; applyTheme(); renderLayers(); redraw(); requestAnimationFrame(() => { updatePage(); redraw(); }); }
+function init() { Promise.all([document.fonts.load('bold 16px "DM Sans"'), document.fonts.load('16px "DM Mono"')]).then(() => redraw()); loadFromLocal(); state.selectedId = null; applyTheme(); renderLayers(); redraw(); requestAnimationFrame(() => { updatePage(); redraw(); }); }
 const canvasEl = document.getElementById('badge-canvas');
 function canvasPt(e) { const r = canvasEl.getBoundingClientRect(); return { x: (e.clientX-r.left)/canvasScale, y: (e.clientY-r.top)/canvasScale }; }
 function hitTest(p) { 
