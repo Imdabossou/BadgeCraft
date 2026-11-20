@@ -9,7 +9,7 @@ Copy `.env.example` to `.env` and fill it in:
 | `SECRET_KEY` | Required. Generate one with `python3 -c "import secrets; print(secrets.token_hex(32))"` |
 | `BASE_URL` | Required. The public address of your install, used in invite and registration links |
 | `ALLOWED_ORIGINS` | Optional extra origins allowed to call the API |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | Optional Google sign-in. Set the redirect URI to `<BASE_URL>/api/auth/google/callback`, here and in Google's console |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Optional Google sign-in. In Google's console, set the redirect URI to `<BASE_URL>/api/auth/google/callback` |
 | `SMTP_*`, `FROM_EMAIL` | Optional, for emailed invites. Invite links work without it |
 
 Data is kept in SQLite in the `db_data` volume. Upgrading keeps your data: new database columns are added automatically on startup.
